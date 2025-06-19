@@ -175,6 +175,8 @@ class ParallelTransferrer:
             await asyncio.gather(*task)
         self.log.debug("All DC connections closed")
 
+    # is this the best approach? 
+    # No
     async def get_file(self, message_id: int, file_name: str) -> Optional[FileInfo]:
         if message_id in self.cached_files:
             file = await self.cached_files[message_id]
