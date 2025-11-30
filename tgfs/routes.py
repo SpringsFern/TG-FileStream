@@ -18,17 +18,21 @@ import logging
 import asyncio
 from aiohttp import web
 
-from tgfs.telegram import multi_clients
-from tgfs.utils import FileInfo
+from tgfs.paralleltransfer import ParallelTransferrer
+from tgfs.utils import FileInfo, get_fileinfo
+from tgfs.telegram import client
 
 log = logging.getLogger(__name__)
 routes = web.RouteTableDef()
 
 client_selection_lock = asyncio.Lock()
 
-@routes.get("/")
-async def handle_root(_: web.Request):
-    return web.json_response({key: [val.active_clients, val.users] for key, val in multi_clients.items()})
+# @routes.get("/")
+# async def handle_root(_: web.Request):
+#     return web.json_response({key: [val.active_clients, val.users] for key, val in multi_clients.items()})
+
+transfer=ParallelTransferrer(client, 0)
+transfer.post_init()
 
 @routes.get(r"/{msg_id:-?\d+}/{name}")
 async def handle_file_request(req: web.Request) -> web.Response:
@@ -36,20 +40,7 @@ async def handle_file_request(req: web.Request) -> web.Response:
     msg_id = int(req.match_info["msg_id"])
     file_name = req.match_info["name"]
 
-    transfer = None
-    client_id = None
-
-    async with client_selection_lock:
-        client_id = min(multi_clients, key=lambda k: multi_clients[k].active_clients)
-        transfer = multi_clients[client_id]
-        if not head:
-            transfer.active_clients += 1
-        log.debug("Selected client %d for %s. Active downloads for this client: %d", client_id, file_name, transfer.active_clients)
-
-    file: FileInfo = await transfer.get_file(msg_id, file_name)
-    if not file:
-        log.warning("File not found for msg_id %d, name %s using client %d", msg_id, file_name, client_id)
-        return web.Response(status=404, text="404: Not Found")
+    file: FileInfo = await get_fileinfo(client, msg_id, file_name)
 
     size = file.file_size
     from_bytes = req.http_range.start or 0

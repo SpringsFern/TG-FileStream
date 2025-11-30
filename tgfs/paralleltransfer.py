@@ -19,14 +19,16 @@
 
 # pylint: disable=protected-access
 
+from __future__ import annotations
+
 import copy
-from collections import OrderedDict
-from typing import AsyncGenerator, Dict, Optional, List
-from contextlib import asynccontextmanager
-from dataclasses import dataclass
 import logging
 import asyncio
 import math
+from collections import defaultdict
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from typing import AsyncGenerator, Dict, Optional, List
 
 from telethon import TelegramClient
 from telethon.crypto import AuthKey
@@ -36,7 +38,7 @@ from telethon.tl.functions import InvokeWithLayerRequest
 from telethon.tl.functions.auth import ExportAuthorizationRequest, ImportAuthorizationRequest
 from telethon.tl.functions.upload import GetFileRequest
 from telethon.tl.types import DcOption
-from telethon.errors import DcIdInvalidError, FloodWaitError
+from telethon.errors import DcIdInvalidError
 
 from tgfs.config import Config
 from tgfs.utils import get_fileinfo, FileInfo, InputTypeLocation
@@ -67,8 +69,8 @@ class DCConnectionManager:
 
     _list_lock: asyncio.Lock
 
-    def __init__(self, client: TelegramClient, dc_id: int, log: logging.Logger) -> None:
-        self.log = log.getChild(f"dc{dc_id}")
+    def __init__(self, client: TelegramClient, dc_id: int, parent_log: logging.Logger) -> None:
+        self.log = parent_log.getChild(f"dc{dc_id}")
         self.client = client
         self.dc_id = dc_id
         self.auth_key = None
@@ -84,15 +86,19 @@ class DCConnectionManager:
         conn = Connection(sender=sender, log=self.log.getChild(
             f"conn{index}"), lock=asyncio.Lock())
         self.connections.append(conn)
-        async with conn.lock:
-            conn.log.info("Connecting...")
-            connection_info = self.client._connection(self.dc.ip_address, self.dc.port, self.dc.id,
-                                                      loggers=self.client._log,
-                                                      proxy=self.client._proxy)
-            await sender.connect(connection_info)
-            if not self.auth_key:
-                await self._export_auth_key(conn)
-            return conn
+        try:
+            async with conn.lock:
+                conn.log.info("Connecting...")
+                connection_info = self.client._connection(self.dc.ip_address, self.dc.port, self.dc.id,
+                                                        loggers=self.client._log,
+                                                        proxy=self.client._proxy)
+                await sender.connect(connection_info)
+                if not self.auth_key:
+                    await self._export_auth_key(conn)
+                return conn
+        except Exception as e:
+            self.connections.remove(conn)
+            raise e
 
     async def _export_auth_key(self, conn: Connection) -> None:
         self.log.info(f"Exporting auth to DC {self.dc.id}"
@@ -138,6 +144,7 @@ class DCConnectionManager:
     async def disconnect(self) -> None:
         async with self._list_lock:
             await asyncio.gather(*[conn.sender.disconnect() for conn in self.connections])
+            self.connections.clear()
 
 
 class ParallelTransferrer:
@@ -145,53 +152,33 @@ class ParallelTransferrer:
     client: TelegramClient
     dc_managers: Dict[int, DCConnectionManager]
     users: int
-    active_clients: int
-    cached_files: OrderedDict[int, asyncio.Task[FileInfo]]
 
     def __init__(self, client: TelegramClient, client_id: int) -> None:
         self.log = root_log.getChild(f"bot{client_id}")
         self.client = client
         self.users = 0
-        self.active_clients = 0
-        self.cached_files = OrderedDict()
-        self.dc_managers = {
-            1: DCConnectionManager(client, 1, self.log),
-            2: DCConnectionManager(client, 2, self.log),
-            3: DCConnectionManager(client, 3, self.log),
-            4: DCConnectionManager(client, 4, self.log),
-            5: DCConnectionManager(client, 5, self.log),
-        }
+        
+        self.dc_managers = defaultdict(lambda: None) 
+
+    def _get_dc_manager(self, dc_id: int) -> DCConnectionManager:
+        if self.dc_managers[dc_id] is None:
+            self.dc_managers[dc_id] = DCConnectionManager(self.client, dc_id, self.log)
+        return self.dc_managers[dc_id]
 
     def post_init(self) -> None:
-        self.dc_managers[self.client.session.dc_id].auth_key = self.client.session.auth_key
+        # Pre-initialize the manager for the current session's DC
+        manager = self._get_dc_manager(self.client.session.dc_id)
+        manager.auth_key = self.client.session.auth_key
 
     async def close_connection(self) -> None:
-        task = []
+        tasks = []
         for dcid, dcm in self.dc_managers.items():
-            if dcm.connections:
+            if dcm and dcm.connections:
                 self.log.debug("Closing connections for DC %d", dcid)
-                task.append(dcm.disconnect())
-        if task:
-            await asyncio.gather(*task)
+                tasks.append(dcm.disconnect())
+        if tasks:
+            await asyncio.gather(*tasks)
         self.log.debug("All DC connections closed")
-
-    # is this the best approach? 
-    # No
-    async def get_file(self, message_id: int, file_name: str) -> Optional[FileInfo]:
-        if message_id in self.cached_files:
-            file = await self.cached_files[message_id]
-            return file if file and file.file_name == file_name else None
-        task = asyncio.create_task(get_fileinfo(self.client, message_id, file_name))
-        if Config.CACHE_SIZE is not None and len(self.cached_files) > Config.CACHE_SIZE:
-            self.cached_files.popitem(last=False)
-        self.cached_files[message_id] = task
-        file_id = await task
-        if not file_id:
-            self.cached_files.pop(message_id)
-            self.log.debug("File not found for message with ID %s", message_id)
-            return None
-        self.log.debug("Generated file ID for message with ID %s", message_id)
-        return file_id
 
     async def _int_download(self, request: GetFileRequest, first_part: int, last_part: int,
         part_count: int, part_size: int, dc_id: int, first_part_cut: int,
@@ -200,7 +187,7 @@ class ParallelTransferrer:
         self.users += 1
         try:
             part = first_part
-            dcm = self.dc_managers[dc_id]
+            dcm = self._get_dc_manager(dc_id)
             async with dcm.get_connection() as conn:
                 log = conn.log
                 while part <= last_part:
@@ -211,7 +198,7 @@ class ParallelTransferrer:
 
                     request.offset += part_size
                     if last_part == first_part:
-                        yield result.bytes[first_part:last_part]
+                        yield result.bytes[first_part_cut:last_part_cut]
                     elif part == first_part:
                         yield result.bytes[first_part_cut:]
                     elif part == last_part:
@@ -227,7 +214,6 @@ class ParallelTransferrer:
         except Exception:
             log.error("Parallel download errored", exc_info=True)
         finally:
-            self.active_clients -= 1
             self.users -= 1
 
     def download(self, location: InputTypeLocation, dc_id: int, file_size: int, offset: int, limit: int
@@ -242,5 +228,7 @@ class ParallelTransferrer:
                        first_part, last_part, part_count, location)
         request = GetFileRequest(location, offset=first_part * part_size, limit=part_size)
 
-        return self._int_download(request, first_part, last_part, part_count, part_size, dc_id,
-                                  first_part_cut, last_part_cut)
+        return self._int_download(
+            request, first_part, last_part, part_count, part_size, dc_id,
+            first_part_cut, last_part_cut
+        )
