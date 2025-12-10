@@ -19,17 +19,22 @@ import logging
 import traceback
 from aiohttp import web
 from telethon import functions
+from telethon.tl.types import User, Config
 
 from tgfs.log import log
 from tgfs.config import Config
-from tgfs.telegram import client, load_plugins
+from tgfs.paralleltransfer import ParallelTransferrer
+from tgfs.telegram import client, load_plugins, multi_clients, start_clients
 from tgfs.routes import routes
+from tgfs.database import DB
+
 
 app = web.Application()
 app.add_routes(routes)
 runner = web.AppRunner(app)
 
 async def start() -> None:
+    await DB.init()
     await client.start(bot_token=Config.BOT_TOKEN)
     if not Config.NO_UPDATE:
         load_plugins("tgfs/plugins")
@@ -42,11 +47,15 @@ async def start() -> None:
                 option.id, option.ip_address, option.port)
             client.session.save()
             break
+    me: User = await client.get_me()
+    transfer = ParallelTransferrer(client, me.id)
+    transfer.post_init()
+    multi_clients.append(transfer)
+    await start_clients()
     await runner.setup()
     await web.TCPSite(runner, Config.HOST, Config.PORT).start()
-    me = await client.get_me()
     log.info("Username: %s", me.username)
-    log.info("DC ID: %d", client.session.dc_id)
+    log.info("DC ID: %d", getattr(client.session, "dc_id", None))
     log.info("URL: %s", Config.PUBLIC_URL)
 
 
@@ -55,6 +64,8 @@ async def stop() -> None:
     await runner.cleanup()
     log.debug("Closing Telegram Client and Connections")
     await client.disconnect()
+    log.debug("Closing Database Connection")
+    await DB.close()
     log.info("Stopped Bot and Server")
 
 async def main() -> None:

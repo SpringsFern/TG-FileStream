@@ -14,22 +14,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from typing import cast
+import logging
 
-from telethon.utils import get_input_location
-from telethon.tl.custom import Message
+from telethon import events
 
-from tgfs.config import Config
-from tgfs.paralleltransfer import ParallelTransferrer
-from tgfs.types import FileSource, InputTypeLocation
 from tgfs.telegram import client
 from tgfs.database import DB
+from tgfs.plugins.message import handle_file_message
 
-async def update_location(source: FileSource, transfer: ParallelTransferrer) -> InputTypeLocation:
-    message = cast(Message, await client.get_messages(source.chat_id, ids=source.message_id))
-    fwd_msg: Message = await message.forward_to(Config.BIN_CHANNEL)
-    msg = cast(Message, await transfer.client.get_messages(fwd_msg.chat_id, ids=fwd_msg.id))
-    _, location = get_input_location(msg)
-    await DB.db.upsert_locations(transfer.client_id, location)
-    return location
+log = logging.getLogger(__name__)
 
+@client.on(events.CallbackQuery(pattern=r"^tos_agree_[1-9]\d{0,19}$"))
+async def handle_buttons(evt: events.CallbackQuery.Event):
+    callback_data = evt.data.decode('utf-8')
+    log.debug("Callback data: %s", callback_data)
+    msg_id = int(callback_data.split("_")[-1])
+    user_id = evt.sender_id
+    if not await DB.db.add_user(user_id):
+        await evt.answer("Something went wrong")
+        return
+    msg = await client.get_messages(user_id, ids=msg_id)
+    await handle_file_message(evt, msg)

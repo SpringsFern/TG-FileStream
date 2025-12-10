@@ -43,7 +43,11 @@ cd TG-FileStream
 pip install -r requirements.txt
 ```
 
-### 3. Create a `.env` file
+### 3. Create/Import Database
+
+Import SQL file located in `tgfs/database/mysql.sql`
+
+### 4. Create a `.env` file
 
 Store the required environment variables in a `.env` file:
 
@@ -55,9 +59,13 @@ BIN_CHANNEL=-1002605638795
 HOST=0.0.0.0
 PORT=8080
 PUBLIC_URL=http://127.0.0.1:8080
+DB_HOST=localhost
+DB_USER=root
+DB_PASS=root
+DB_NAME=FTL
 ```
 
-### 4. Run the server
+### 5. Run the server
 
 ```bash
 python3 -m tgfs
@@ -80,6 +88,10 @@ python3 -m tgfs
 | `CACHE_SIZE`         | `128`                  | Number of file info objects to cache                                         |
 | `DOWNLOAD_PART_SIZE` | `1048576 (1MB)`        | Number of bytes to request in a single chunk                                 |
 | `NO_UPDATE`          | `False`                | Whether to reply to messages sent to the bot (True to disable replies)       |
+| `DB_HOST`            | ✅                     | Database Host Name                                                           |
+| `DB_USER`            | ✅                     | Database User Name                                                           |
+| `DB_PASS`            | ✅                     | Database Password                                                            |
+| `DB_NAME`            | ✅                     | Database Name                                                                |
 
 
 

@@ -19,8 +19,6 @@
 
 # pylint: disable=protected-access
 
-from __future__ import annotations
-
 import copy
 import logging
 import asyncio
@@ -41,7 +39,7 @@ from telethon.tl.types import DcOption
 from telethon.errors import DcIdInvalidError
 
 from tgfs.config import Config
-from tgfs.utils import get_fileinfo, FileInfo, InputTypeLocation
+from tgfs.types import InputTypeLocation
 
 root_log = logging.getLogger(__name__)
 
@@ -150,12 +148,14 @@ class DCConnectionManager:
 class ParallelTransferrer:
     log: logging.Logger
     client: TelegramClient
+    client_id: int
     dc_managers: Dict[int, DCConnectionManager]
     users: int
 
     def __init__(self, client: TelegramClient, client_id: int) -> None:
         self.log = root_log.getChild(f"bot{client_id}")
         self.client = client
+        self.client_id = client_id
         self.users = 0
         
         self.dc_managers = defaultdict(lambda: None) 

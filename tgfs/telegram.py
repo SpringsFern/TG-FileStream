@@ -14,15 +14,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import asyncio
 import importlib.util
 import logging
 
 from pathlib import Path
+from typing import Optional
 from telethon import TelegramClient, functions
+from telethon.sessions import MemorySession
+from telethon.tl.types import InputPeerUser
 
 from tgfs.config import Config
+from tgfs.paralleltransfer import ParallelTransferrer
 
 log = logging.getLogger(__name__)
+
+multi_clients: list[ParallelTransferrer] = []
 
 client = TelegramClient(
     "tg-filestream",
@@ -30,6 +37,37 @@ client = TelegramClient(
     api_hash=Config.API_HASH,
     receive_updates=not Config.NO_UPDATE
 )
+
+async def _start_client(token: str) -> Optional[ParallelTransferrer]:
+    bot = TelegramClient(
+        MemorySession(),
+        api_id=Config.API_ID,
+        api_hash=Config.API_HASH,
+        receive_updates=False
+    )
+    try:
+        await bot.start(bot_token=token)
+        # https://github.com/LonamiWebs/Telethon/blob/59da66e105ba29eee7760538409181859c7d310d/telethon/client/downloads.py#L62
+        config = await bot(functions.help.GetConfigRequest())
+        print(type(config))
+        for option in config.dc_options:
+            if option.ip_address == bot.session.server_address:
+                bot.session.set_dc(
+                    option.id, option.ip_address, option.port)
+                bot.session.save()
+                break
+        me: InputPeerUser = await bot.get_me(True)
+        transfer = ParallelTransferrer(bot, me.user_id)
+        transfer.post_init()
+        return transfer
+    except Exception as e:
+        log.error("Faied to Start Client %s: %s", token.split(":")[0], e)
+        return None
+    
+async def start_clients():
+    tasks = (_start_client(t) for t in Config.TOKENS)
+    results = await asyncio.gather(*tasks)
+    multi_clients.extend(filter(None, results))
 
 def load_plugins(folder_path: str) -> None:
     folder = Path(folder_path)

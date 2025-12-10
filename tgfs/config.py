@@ -52,3 +52,9 @@ class Config:
     CACHE_SIZE: int = int(environ.get("CACHE_SIZE", 128))
     DOWNLOAD_PART_SIZE: int = int(environ.get("DOWNLOAD_PART_SIZE", 1024 * 1024))
     NO_UPDATE: bool = bool(environ.get("NO_UPDATE", False))
+    TOS: str = ""
+
+    DB_HOST: str = environ["DB_HOST"]
+    DB_USER: str = environ["DB_USER"]
+    DB_PASS: str = environ["DB_PASS"]
+    DB_NAME: str = environ["DB_NAME"]

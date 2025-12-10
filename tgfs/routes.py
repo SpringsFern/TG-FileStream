@@ -19,28 +19,31 @@ import asyncio
 from aiohttp import web
 
 from tgfs.paralleltransfer import ParallelTransferrer
-from tgfs.utils import FileInfo, get_fileinfo
-from tgfs.telegram import client
+from tgfs.utils import update_location
+from tgfs.telegram import multi_clients
+from tgfs.database import DB
+from tgfs.types import FileInfo
 
 log = logging.getLogger(__name__)
 routes = web.RouteTableDef()
 
 client_selection_lock = asyncio.Lock()
 
-# @routes.get("/")
-# async def handle_root(_: web.Request):
-#     return web.json_response({key: [val.active_clients, val.users] for key, val in multi_clients.items()})
+@routes.get("/")
+async def handle_root(_: web.Request):
+    return web.json_response({transfer.client_id: [transfer.users] for transfer in multi_clients})
 
-transfer=ParallelTransferrer(client, 0)
-transfer.post_init()
-
-@routes.get(r"/{msg_id:-?\d+}/{name}")
+# @routes.get(r"/{msg_id:-?\d+}/{name}")
+@routes.get("/{user_id}/{file_id}")
 async def handle_file_request(req: web.Request) -> web.Response:
     head: bool = req.method == "HEAD"
-    msg_id = int(req.match_info["msg_id"])
-    file_name = req.match_info["name"]
+    user_id = int(req.match_info["user_id"])
+    file_id = int(req.match_info["file_id"])
 
-    file: FileInfo = await get_fileinfo(client, msg_id, file_name)
+    transfer: ParallelTransferrer = min(multi_clients, key=lambda c: c.users)
+    logging.debug("Using client %s", transfer.client_id)
+
+    file: FileInfo = await DB.db.get_file(file_id)
 
     size = file.file_size
     from_bytes = req.http_range.start or 0
@@ -48,11 +51,14 @@ async def handle_file_request(req: web.Request) -> web.Response:
 
     if (until_bytes >= size) or (from_bytes < 0) or (until_bytes < from_bytes):
         return web.Response(status=416, headers={"Content-Range": f"bytes */{size}"})
-
     if head:
         body=None
     else:
-        body=transfer.download(file.location, file.dc_id, size, from_bytes, until_bytes)
+        location = await DB.db.get_location(file,  transfer.client_id)
+        if location is None:
+            source = await DB.db.get_source(file.id, user_id)
+            location = await update_location(source, transfer)
+        body=transfer.download(location, file.dc_id, size, from_bytes, until_bytes)
 
     return web.Response(
         status=200 if (from_bytes == 0 and until_bytes == size - 1) else 206,
@@ -61,6 +67,6 @@ async def handle_file_request(req: web.Request) -> web.Response:
         "Content-Type": file.mime_type,
         "Content-Range": f"bytes {from_bytes}-{until_bytes}/{size}",
         "Content-Length": str(until_bytes - from_bytes + 1),
-        "Content-Disposition": f'attachment; filename="{file_name}"',
+        "Content-Disposition": f'attachment; filename="{file.file_name}"',
         "Accept-Ranges": "bytes",
     })

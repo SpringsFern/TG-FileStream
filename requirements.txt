@@ -2,3 +2,4 @@ telethon
 aiohttp
 python-dotenv
 cryptg
+aiomysql
