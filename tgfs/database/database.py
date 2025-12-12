@@ -15,12 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # from abc import ABC, abstractmethod
+import datetime
 import aiomysql
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, List, Optional
 
 from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
 
-from tgfs.types import FileSource, User, FileInfo, InputTypeLocation
+from tgfs.types import FileSource, GroupInfo, User, FileInfo, InputTypeLocation
 
 class MySQLDB:
     def __init__(self, pool: aiomysql.Pool):
@@ -51,7 +52,7 @@ class MySQLDB:
     async def get_user(self, user_id: int) -> Optional[User]:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute("SELECT user_id, join_date, ban_date, warns, preferred_lang FROM USER WHERE user_id = %s", (user_id,))
+                await cur.execute("SELECT user_id, join_date, ban_date, warns, preferred_lang, curt_op, op_id FROM USER WHERE user_id = %s", (user_id,))
                 row = await cur.fetchone()
                 if not row:
                     return None
@@ -79,15 +80,17 @@ class MySQLDB:
                 try:
                     await cur.execute(
                         """
-                        INSERT INTO USER (user_id, join_date, ban_date, warns, preferred_lang)
-                        VALUES (%s, %s, %s, %s, %s) AS new
+                        INSERT INTO USER (user_id, join_date, ban_date, warns, preferred_lang, curt_op, op_id)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s) AS new
                         ON DUPLICATE KEY UPDATE
                           join_date = new.join_date,
                           ban_date = new.ban_date,
                           warns = new.warns,
-                          preferred_lang = new.preferred_lang
+                          preferred_lang = new.preferred_lang,
+                          curt_op = new.curt_op,
+                          op_id = new.op_id
                         """,
-                        (user.user_id, user.join_date, user.ban_date, user.warns, user.preferred_lang)
+                        (user.user_id, user.join_date, user.ban_date, user.warns, user.preferred_lang, user.curt_op.value, user.op_id)
                     )
                     await conn.commit()
                 except Exception:
@@ -292,3 +295,120 @@ class MySQLDB:
                 except Exception:
                     await conn.rollback()
                     raise
+
+    async def create_group(self, user_id: int, name: str, is_group: bool = True) -> int:
+        async with self._pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                try:
+                    await cur.execute(
+                        """
+                        INSERT INTO FILE_GROUP (user_id, name, is_group)
+                        VALUES (%s, %s, %s)
+                        """,
+                        (user_id, name, is_group)
+                    )
+                    group_id = cur.lastrowid
+                    await conn.commit()
+                    return group_id
+                except Exception:
+                    await conn.rollback()
+                    raise
+
+    async def link_file_group(self, group_id: int, file_id: int, order: Optional[int] = None) -> None:
+        async with self._pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                try:
+                    if order is None:
+                        await cur.execute(
+                            """
+                            SELECT COALESCE(MAX(order_index), 0) + 1 AS next_order
+                            FROM FILE_GROUP_FILE
+                            WHERE group_id = %s
+                            """,
+                            (group_id,)
+                        )
+                        row = await cur.fetchone()
+                        order = int(row[0]) if row else 1
+
+                    await cur.execute(
+                        """
+                        INSERT INTO FILE_GROUP_FILE (group_id, id, order_index)
+                        VALUES (%s, %s, %s)
+                        ON DUPLICATE KEY UPDATE
+                          order_index = VALUES(order_index)
+                        """,
+                        (group_id, file_id, order)
+                    )
+
+                    await conn.commit()
+                except Exception:
+                    await conn.rollback()
+                    raise
+
+    async def get_groups(self, user_id: int) -> AsyncGenerator[GroupInfo, None]:
+        async with self._pool.acquire() as conn:
+            async with conn.cursor(aiomysql.SSCursor) as cur:
+                await cur.execute(
+                    """
+                    SELECT group_id, user_id, name, is_group, created_at
+                    FROM FILE_GROUP
+                    WHERE user_id = %s
+                    ORDER BY created_at DESC
+                    """,
+                    (user_id,)
+                )
+                while True:
+                    row = await cur.fetchone()
+                    if not row:
+                        break
+                    group_id, user_id, name, is_group, created_at = row
+                    gi = GroupInfo(
+                        group_id=int(group_id),
+                        user_id=int(user_id),
+                        name=str(name),
+                        is_group=bool(is_group),
+                        created_at=created_at if isinstance(created_at, datetime.datetime) else None,
+                        files=None
+                    )
+                    yield gi
+
+    async def get_group(self, group_id: int, user_id: int) -> Optional[GroupInfo]:
+        async with self._pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(
+                    """
+                    SELECT group_id, user_id, name, is_group, created_at
+                    FROM FILE_GROUP
+                    WHERE group_id = %s AND user_id = %s
+                    LIMIT 1
+                    """,
+                    (group_id, user_id)
+                )
+                row = await cur.fetchone()
+                if not row:
+                    return None
+
+                gi = GroupInfo(
+                    group_id=int(row["group_id"]),
+                    user_id=int(row["user_id"]),
+                    name=row["name"],
+                    is_group=bool(row["is_group"]),
+                    created_at=row.get("created_at"),
+                    files=[]
+                )
+
+                await cur.execute(
+                    """
+                    SELECT id
+                    FROM FILE_GROUP_FILE
+                    WHERE group_id = %s
+                    ORDER BY order_index ASC
+                    """,
+                    (group_id,)
+                )
+                rows = await cur.fetchall()
+                if not rows:
+                    return gi
+
+                gi.files.extend([int(r["id"]) for r in rows])
+                return gi

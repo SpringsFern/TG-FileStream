@@ -15,18 +15,20 @@ CREATE TABLE IF NOT EXISTS FILE_LOCATION (
   file_reference BLOB NULL,
   PRIMARY KEY (bot_id, id),
   UNIQUE KEY uniq_bot_file (bot_id, id),
-  CONSTRAINT fk_file_ids_files FOREIGN KEY (id) REFERENCES files(id) ON DELETE RESTRICT
+  CONSTRAINT fk_file_ids_files FOREIGN KEY (id) REFERENCES FILE(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX file_ids_file_idx ON file_ids (id);
-CREATE INDEX file_ids_bot_idx  ON file_ids (bot_id);
+CREATE INDEX file_ids_file_idx ON FILE_LOCATION (id);
+CREATE INDEX file_ids_bot_idx  ON FILE_LOCATION (bot_id);
 
 CREATE TABLE IF NOT EXISTS USER (
     user_id BIGINT PRIMARY KEY,
     join_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ban_date DATETIME NULL,
     warns TINYINT NOT NULL DEFAULT 0,
-    preferred_lang CHAR(2) NOT NULL DEFAULT 'en'
+    preferred_lang CHAR(2) NOT NULL DEFAULT 'en',
+    curt_op TINYINT DEFAULT 0,
+    op_id BIGINT DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS USER_FILE (
@@ -36,9 +38,33 @@ CREATE TABLE IF NOT EXISTS USER_FILE (
   source_msg_id BIGINT NULL,
   added_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, id),
-  CONSTRAINT fk_user_files_users FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-  CONSTRAINT fk_user_files_files FOREIGN KEY (id) REFERENCES files(id) ON DELETE RESTRICT
+  CONSTRAINT fk_user_files_users FOREIGN KEY (user_id) REFERENCES USER(user_id) ON DELETE CASCADE,
+  CONSTRAINT fk_user_files_files FOREIGN KEY (id) REFERENCES FILE(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX user_files_file_idx ON user_files (id);
-CREATE INDEX user_files_user_idx ON user_files (user_id);
+CREATE INDEX user_files_file_idx ON USER_FILE (id);
+CREATE INDEX user_files_user_idx ON USER_FILE (user_id);
+
+CREATE TABLE IF NOT EXISTS FILE_GROUP (
+  group_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  is_group BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_file_group_owner FOREIGN KEY (user_id) REFERENCES USER(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX idx_file_group_owner ON FILE_GROUP (user_id);
+
+CREATE TABLE IF NOT EXISTS FILE_GROUP_FILE (
+  group_id BIGINT UNSIGNED NOT NULL,
+  id BIGINT NOT NULL,
+  order_index INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (group_id, id),
+  CONSTRAINT fk_fg_file_group FOREIGN KEY (group_id) REFERENCES FILE_GROUP(group_id) ON DELETE CASCADE,
+  CONSTRAINT fk_fg_file FOREIGN KEY (id) REFERENCES FILE(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX idx_fg_file ON FILE_GROUP_FILE (id);
+CREATE INDEX idx_fg_group ON FILE_GROUP_FILE (group_id);
+CREATE INDEX idx_fg_order ON FILE_GROUP_FILE (group_id, order_index);

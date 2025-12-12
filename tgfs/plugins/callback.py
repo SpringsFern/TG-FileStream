@@ -20,7 +20,7 @@ from telethon import events
 
 from tgfs.telegram import client
 from tgfs.database import DB
-from tgfs.plugins.message import handle_file_message
+# from tgfs.plugins.message import handle_file_message
 
 log = logging.getLogger(__name__)
 
@@ -33,5 +33,6 @@ async def handle_buttons(evt: events.CallbackQuery.Event):
     if not await DB.db.add_user(user_id):
         await evt.answer("Something went wrong")
         return
-    msg = await client.get_messages(user_id, ids=msg_id)
-    await handle_file_message(evt, msg)
+    # msg = await client.get_messages(user_id, ids=msg_id)
+    # await handle_file_message(evt, msg)
+    await evt.answer("You have agreed to the Terms of Service.")

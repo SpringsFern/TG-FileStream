@@ -34,7 +34,7 @@ async def handle_root(_: web.Request):
     return web.json_response({transfer.client_id: [transfer.users] for transfer in multi_clients})
 
 # @routes.get(r"/{msg_id:-?\d+}/{name}")
-@routes.get("/{user_id}/{file_id}")
+@routes.get("/dl/{user_id}/{file_id}")
 async def handle_file_request(req: web.Request) -> web.Response:
     head: bool = req.method == "HEAD"
     user_id = int(req.match_info["user_id"])
@@ -70,3 +70,14 @@ async def handle_file_request(req: web.Request) -> web.Response:
         "Content-Disposition": f'attachment; filename="{file.file_name}"',
         "Accept-Ranges": "bytes",
     })
+
+@routes.get("/group/{user_id}/{group_id}")
+async def handle_file_request(req: web.Request) -> web.Response:
+    head: bool = req.method == "HEAD"
+    user_id = int(req.match_info["user_id"])
+    group_id = int(req.match_info["group_id"])
+    group = await DB.db.get_group(group_id, user_id)
+    if group is None:
+        return web.Response(status=404, text="Group not found")
+    resp = "".join(f"{req.scheme}://{req.host}/dl/{user_id}/{file_id}\n" for file_id in group.files)
+    return web.Response(status=200, text=resp)

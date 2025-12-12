@@ -15,13 +15,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
-from typing import Optional, Union, Any, Dict
+from typing import List, Optional, Union, Any, Dict
 from dataclasses import dataclass
+from enum import Enum
 
 from telethon.tl import types
 
 InputTypeLocation = Union[types.InputDocumentFileLocation, types.InputPhotoFileLocation]
 InputMedia = Union[types.Document, types.Photo, types.PhotoEmpty, types.DocumentEmpty]
+
+class Status(Enum):
+    NO_OP=0
+    GROUP=1
 
 @dataclass
 class FileInfo:
@@ -49,6 +54,8 @@ class User:
     ban_date: Optional[datetime.datetime] = None
     warns: int = 0
     preferred_lang: str = "en"   # 2-letter ISO code, default en
+    curt_op: Optional[Status] = Status.NO_OP
+    op_id: Optional[int] = 0
 
     @property
     def is_banned(self) -> bool:
@@ -74,4 +81,15 @@ class User:
             ban_date = parse_dt(row.get("ban_date")),
             warns = int(row.get("warns", 0)),
             preferred_lang = row.get("preferred_lang") or "en",
+            curt_op = Status(row.get("curt_op")),
+            op_id = int(row.get("op_id"))
         )
+    
+@dataclass
+class GroupInfo:
+    group_id: int
+    user_id: int
+    name: str
+    is_group: bool
+    created_at: Optional[datetime.datetime]
+    files: Optional[List[int]] = None

@@ -21,8 +21,9 @@ from tgfs.database.database import MySQLDB
 class DB:
     db: Optional[MySQLDB] = None
 
-    async def init():
-        DB.db = await MySQLDB.create_pool(
+    @classmethod
+    async def init(cls):
+        cls.db = await MySQLDB.create_pool(
             host=Config.DB_HOST,
             user=Config.DB_USER,
             password=Config.DB_PASS,
@@ -31,6 +32,7 @@ class DB:
             maxsize=5
         )
 
-    async def close():
-        if DB.db is not None:
-            await DB.db.close()
+    @classmethod
+    async def close(cls):
+        if cls.db is not None:
+            await cls.db.close()
