@@ -15,15 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+from typing import Tuple, cast
 
-from telethon import events
+from telethon import events, Button
 from telethon.custom import Message
-from telethon import Button
+from telethon.utils import get_input_location
 
 from tgfs.config import Config
 from tgfs.telegram import client, multi_clients
 from tgfs.database import DB
-from tgfs.types import FileInfo, InputMedia, Status
+from tgfs.types import FileInfo, InputTypeLocation, Status
 
 log = logging.getLogger(__name__)
 
@@ -50,22 +51,20 @@ async def handle_file_message(evt: events.NewMessage.Event, msg=None) -> None:
     user = await check_get_user(msg.sender_id, msg.id)
     if user is None:
         return
-    media: InputMedia = getattr(msg.media, "document", None) or getattr(msg.media, "photo", None)
+    dc_id, location = cast(Tuple[int, InputTypeLocation], get_input_location(msg.media))
     file_info = FileInfo(
-        id=media.id,
-        dc_id=media.dc_id,
+        id=location.id,
+        dc_id=dc_id,
         file_size=msg.file.size,
         mime_type=msg.file.mime_type,
-        file_name=msg.file.name or f"{media.id}{msg.file.ext or ''}",
-        thumb_size="",
+        file_name=msg.file.name or f"{location.id}{msg.file.ext or ''}",
+        thumb_size=location.thumb_size,
         is_deleted=False
     )
     await DB.db.add_file(file_info)
-    await DB.db.add_location(
-        file_info.id,
+    await DB.db.upsert_location(
         multi_clients[0].client_id,
-        media.access_hash,
-        media.file_reference
+        location
     )
     if user.curt_op == Status.GROUP and user.op_id != 0:
         await DB.db.link_file_group(user.op_id, file_info.id)

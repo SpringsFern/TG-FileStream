@@ -17,7 +17,7 @@
 # from abc import ABC, abstractmethod
 import datetime
 import aiomysql
-from typing import AsyncGenerator, List, Optional
+from typing import AsyncGenerator, Optional
 
 from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
 
@@ -29,7 +29,7 @@ class MySQLDB:
 
     @classmethod
     async def create_pool(cls, *, host: str, port: int = 3306, user: str, password: str,
-                          db: str, minsize: int = 1, maxsize: int = 10, autocommit: bool = True,
+                          db: str, minsize: int = 1, maxsize: int = 10, autocommit: bool = False,
                           connect_timeout: int = 10) -> "MySQLDB":
         pool = await aiomysql.create_pool(
             host=host, port=port, user=user, password=password, db=db,
@@ -111,9 +111,9 @@ class MySQLDB:
 
     async def get_users(self) -> AsyncGenerator[User, None]:
         async with self._pool.acquire() as conn:
-            async with conn.cursor(aiomysql.SSCursor) as cur:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    "SELECT user_id, join_date, ban_date, warns, preferred_lang FROM users"
+                    "SELECT user_id, join_date, ban_date, warns, preferred_lang, curt_op, op_id FROM USER"
                 )
 
                 while True:
@@ -121,20 +121,12 @@ class MySQLDB:
                     if not row:
                         break
 
-                    row_dict = {
-                        "user_id": row[0],
-                        "join_date": row[1],
-                        "ban_date": row[2],
-                        "warns": row[3],
-                        "preferred_lang": row[4],
-                    }
-
-                    yield User.from_row(row_dict)
+                    yield User.from_row(row)
 
     async def count_users(self) -> int:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
-                await cur.execute("SELECT COUNT(*) FROM users")
+                await cur.execute("SELECT COUNT(*) FROM USER")
                 (count,) = await cur.fetchone()
                 return int(count)            
 
@@ -158,25 +150,6 @@ class MySQLDB:
                             file.file_name, file.thumb_size,
                             file.is_deleted
                         )
-                    )
-                    await conn.commit()
-                except Exception:
-                    await conn.rollback()
-                    raise
-
-    async def add_location(self, file_id: int, bot_id: int, access_hash: int, file_reference: bytes) -> None:
-        async with self._pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                try:
-                    await cur.execute(
-                        """
-                        INSERT INTO FILE_LOCATION (bot_id, id, access_hash, file_reference)
-                        VALUES (%s, %s, %s, %s)
-                        ON DUPLICATE KEY UPDATE
-                          access_hash = VALUES(access_hash),
-                          file_reference = VALUES(file_reference)
-                        """,
-                        (bot_id, file_id, access_hash, file_reference)
                     )
                     await conn.commit()
                 except Exception:
@@ -256,7 +229,7 @@ class MySQLDB:
                     thumb_size=file.thumb_size
                 ) 
 
-    async def get_source(self, file_id: int, user_id: int):
+    async def get_source(self, file_id: int, user_id: int) -> Optional[FileSource] :
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
@@ -277,7 +250,7 @@ class MySQLDB:
                     time = row["added_at"]
                 )
 
-    async def upsert_locations(self, bot_id: int, loc: InputTypeLocation) -> None:
+    async def upsert_location(self, bot_id: int, loc: InputTypeLocation) -> None:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 try:
@@ -321,9 +294,10 @@ class MySQLDB:
                     if order is None:
                         await cur.execute(
                             """
-                            SELECT COALESCE(MAX(order_index), 0) + 1 AS next_order
+                            SELECT COALESCE(MAX(order_index), 0) + 1
                             FROM FILE_GROUP_FILE
                             WHERE group_id = %s
+                            FOR UPDATE
                             """,
                             (group_id,)
                         )
