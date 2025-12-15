@@ -37,6 +37,7 @@ async def handle_buttons(evt: events.CallbackQuery.Event):
     # msg = await client.get_messages(user_id, ids=msg_id)
     # await handle_file_message(evt, msg)
     await evt.answer("You have agreed to the Terms of Service.")
+    await evt.edit(buttons=[[Button.inline("Agreed", b"tos_agreed")]])
 
 @client.on(events.CallbackQuery(pattern=r"^fileinfo$"))
 async def handle_done_command(evt: events.CallbackQuery.Event) -> None:

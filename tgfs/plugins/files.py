@@ -22,10 +22,10 @@ from telethon.custom import Message
 from telethon.utils import get_input_location
 
 from tgfs.config import Config
-from tgfs.plugins.message import check_get_user
 from tgfs.telegram import client, multi_clients
 from tgfs.database import DB
 from tgfs.types import FileInfo, InputTypeLocation, Status
+from tgfs.utils import check_get_user
 
 log = logging.getLogger(__name__)
 
