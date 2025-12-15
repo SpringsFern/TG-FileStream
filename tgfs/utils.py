@@ -16,6 +16,7 @@
 
 from typing import cast
 
+from telethon import Button
 from telethon.utils import get_input_location
 from telethon.tl.custom import Message
 
@@ -32,3 +33,14 @@ async def update_location(source: FileSource, transfer: ParallelTransferrer) -> 
     await DB.db.upsert_location(transfer.client_id, location)
     return location
 
+async def check_get_user(user_id: int, msg_id):
+    user = await DB.db.get_user(user_id)
+    if user is None:
+        await client.send_message(
+            user_id, "Please agree to the Terms of Service before using the bot.",
+            buttons=[[Button.inline('Agree', f'tos_agree_{msg_id}'.encode('utf-8'))]]
+        )
+    if user is not None and user.is_banned:
+        await client.send_message(user_id, "You are banned from using this bot.")
+        return None
+    return user

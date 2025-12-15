@@ -25,24 +25,12 @@ from tgfs.config import Config
 from tgfs.telegram import client, multi_clients
 from tgfs.database import DB
 from tgfs.types import FileInfo, InputTypeLocation, Status
+from tgfs.utils import check_get_user
 
 log = logging.getLogger(__name__)
 
-async def check_get_user(user_id: int, msg_id):
-    user = await DB.db.get_user(user_id)
-    if user is None:
-        await client.send_message(
-            user_id, "Please agree to the Terms of Service before using the bot.",
-            buttons=[[Button.inline('Agree', f'tos_agree_{msg_id}'.encode('utf-8'))]]
-        )
-    if user is not None and user.is_banned:
-        await client.send_message(user_id, "You are banned from using this bot.")
-        return None
-    return user
-
-
 @client.on(events.NewMessage(incoming=True, pattern=r"^\/start", func=lambda x: x.is_private and not x.file))
-async def handle_text_message(evt: events.NewMessage.Event) -> None:
+async def handle_start_command(evt: events.NewMessage.Event) -> None:
     await evt.reply("Send me any telegram file or photo I will generate a link for it")
 
 @client.on(events.NewMessage(incoming=True, func=lambda x: x.is_private and x.file))
@@ -79,7 +67,7 @@ async def handle_file_message(evt: events.NewMessage.Event, msg=None) -> None:
     log.info("Generated Link %s", url)
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^\/group", func=lambda x: x.is_private and not x.file))
-async def handle_text_message(evt: events.NewMessage.Event) -> None:
+async def handle_group_command(evt: events.NewMessage.Event) -> None:
     msg: Message = evt.message
     user = await check_get_user(msg.sender_id, msg.id)
     if user is None:
@@ -92,7 +80,7 @@ async def handle_text_message(evt: events.NewMessage.Event) -> None:
         await evt.reply("You are already in an operation. Please complete it before starting a new one.")
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^\/done", func=lambda x: x.is_private and not x.file))
-async def handle_text_message(evt: events.NewMessage.Event) -> None:
+async def handle_done_command(evt: events.NewMessage.Event) -> None:
     msg: Message = evt.message
     user = await check_get_user(msg.sender_id, msg.id)
     if user is None:
