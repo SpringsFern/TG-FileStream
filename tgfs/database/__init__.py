@@ -16,14 +16,14 @@
 
 from typing import Optional
 from tgfs.config import Config
-from tgfs.database.database import MySQLDB
+from tgfs.database.mysql import MySQLDB
 
 class DB:
-    db: Optional[MySQLDB] = None
+    db: Optional[MySQLDB] = MySQLDB()
 
     @classmethod
     async def init(cls):
-        cls.db = await MySQLDB.create_pool(
+        await cls.db.connect(
             host=Config.DB_HOST,
             user=Config.DB_USER,
             password=Config.DB_PASS,

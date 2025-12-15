@@ -14,122 +14,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# from abc import ABC, abstractmethod
 import datetime
 import aiomysql
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, Tuple, Optional
 
+from pyparsing import Union
 from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
 
-from tgfs.types import FileSource, GroupInfo, User, FileInfo, InputTypeLocation
+from tgfs.types import FileSource, GroupInfo, FileInfo, InputTypeLocation
 
-class MySQLDB:
-    def __init__(self, pool: aiomysql.Pool):
-        self._pool = pool
-
-    @classmethod
-    async def create_pool(cls, *, host: str, port: int = 3306, user: str, password: str,
-                          db: str, minsize: int = 1, maxsize: int = 10, autocommit: bool = False,
-                          connect_timeout: int = 10) -> "MySQLDB":
-        pool = await aiomysql.create_pool(
-            host=host, port=port, user=user, password=password, db=db,
-            minsize=minsize, maxsize=maxsize, autocommit=autocommit,
-            connect_timeout=connect_timeout, charset="utf8mb4"
-        )
-        return cls(pool)
-
-    # async def init_db(self) -> None:
-    #     """Create tables if they don't exist."""
-    #     async with self._pool.acquire() as conn:
-    #         async with conn.cursor() as cur:
-    #             await cur.execute(CREATE_USERS_TABLE_SQL)
-    #             await conn.commit()
-
-    async def close(self) -> None:
-        self._pool.close()
-        await self._pool.wait_closed()
-
-    async def get_user(self, user_id: int) -> Optional[User]:
-        async with self._pool.acquire() as conn:
-            async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute("SELECT user_id, join_date, ban_date, warns, preferred_lang, curt_op, op_id FROM USER WHERE user_id = %s", (user_id,))
-                row = await cur.fetchone()
-                if not row:
-                    return None
-                return User.from_row(row)
-
-
-    async def add_user(self, user_id: int) -> bool:
-        async with self._pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                try:
-                    await cur.execute(
-                        "INSERT IGNORE INTO USER (user_id) VALUES (%s)",
-                        (user_id,)
-                    )
-                    inserted = cur.rowcount > 0
-                    await conn.commit()
-                    return bool(inserted)
-                except Exception:
-                    await conn.rollback()
-                    raise
-
-    async def upsert_user(self, user: User) -> None:
-        async with self._pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                try:
-                    await cur.execute(
-                        """
-                        INSERT INTO USER (user_id, join_date, ban_date, warns, preferred_lang, curt_op, op_id)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s) AS new
-                        ON DUPLICATE KEY UPDATE
-                          join_date = new.join_date,
-                          ban_date = new.ban_date,
-                          warns = new.warns,
-                          preferred_lang = new.preferred_lang,
-                          curt_op = new.curt_op,
-                          op_id = new.op_id
-                        """,
-                        (user.user_id, user.join_date, user.ban_date, user.warns, user.preferred_lang, user.curt_op.value, user.op_id)
-                    )
-                    await conn.commit()
-                except Exception:
-                    await conn.rollback()
-                    raise
-
-    async def delete_user(self, user_id: int) -> bool:
-        async with self._pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                try:
-                    await cur.execute("DELETE FROM USER WHERE user_id = %s", (user_id,))
-                    deleted = cur.rowcount > 0
-                    await conn.commit()
-                    return bool(deleted)
-                except Exception:
-                    await conn.rollback()
-                    raise
-
-    async def get_users(self) -> AsyncGenerator[User, None]:
-        async with self._pool.acquire() as conn:
-            async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute(
-                    "SELECT user_id, join_date, ban_date, warns, preferred_lang, curt_op, op_id FROM USER"
-                )
-
-                while True:
-                    row = await cur.fetchone()
-                    if not row:
-                        break
-
-                    yield User.from_row(row)
-
-    async def count_users(self) -> int:
-        async with self._pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute("SELECT COUNT(*) FROM USER")
-                (count,) = await cur.fetchone()
-                return int(count)            
-
+class FileDB:
     async def add_file(self, file: FileInfo) -> None:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -319,32 +213,24 @@ class MySQLDB:
                     await conn.rollback()
                     raise
 
-    async def get_groups(self, user_id: int) -> AsyncGenerator[GroupInfo, None]:
+    async def get_groups(self, user_id: int, is_group: bool = True) -> AsyncGenerator[Tuple[int, str], None]:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.SSCursor) as cur:
                 await cur.execute(
                     """
-                    SELECT group_id, user_id, name, is_group, created_at
+                    SELECT group_id, name
                     FROM FILE_GROUP
-                    WHERE user_id = %s
+                    WHERE user_id = %s AND is_group = %s
                     ORDER BY created_at DESC
                     """,
-                    (user_id,)
+                    (user_id, is_group)
                 )
                 while True:
                     row = await cur.fetchone()
                     if not row:
                         break
-                    group_id, user_id, name, is_group, created_at = row
-                    gi = GroupInfo(
-                        group_id=int(group_id),
-                        user_id=int(user_id),
-                        name=str(name),
-                        is_group=bool(is_group),
-                        created_at=created_at if isinstance(created_at, datetime.datetime) else None,
-                        files=None
-                    )
-                    yield gi
+                    group_id, name = row
+                    yield (group_id, name)
 
     async def get_group(self, group_id: int, user_id: int) -> Optional[GroupInfo]:
         async with self._pool.acquire() as conn:
@@ -386,3 +272,48 @@ class MySQLDB:
 
                 gi.files.extend([int(r["id"]) for r in rows])
                 return gi
+
+    async def get_files(self, user_id: int) -> AsyncGenerator[Tuple[int, str], None]:
+        async with self._pool.acquire() as conn:
+            async with conn.cursor(aiomysql.SSCursor) as cur:
+                await cur.execute(
+                    """
+                    SELECT f.id AS file_id, f.file_name
+                    FROM FILE f join USER_FILE uf ON f.id = uf.id
+                    WHERE uf.user_id = %s
+                    ORDER BY uf.added_at DESC
+                    """,
+                    (user_id,)
+                )
+                while True:
+                    row = await cur.fetchone()
+                    if not row:
+                        break
+                    file_id, file_name = row
+                    yield (int(file_id), str(file_name))
+
+    async def total_files(self, user_id: int, is_group: Optional[bool] = None) -> int:
+        async with self._pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                if is_group is None:
+                    await cur.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM USER_FILE
+                        WHERE user_id = %s
+                        """,
+                        (user_id,)
+                    )
+                else:
+                    await cur.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM FILE_GROUP
+                        WHERE user_id = %s AND is_group = %s
+                        """,
+                        (user_id, is_group)
+                    )
+
+                row = await cur.fetchone()
+                return int(row[0]) if row else 0
+
