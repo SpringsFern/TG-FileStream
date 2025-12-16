@@ -31,13 +31,27 @@ log = logging.getLogger(__name__)
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^\/start", func=lambda x: x.is_private and not x.file))
 async def handle_start_command(evt: events.NewMessage.Event) -> None:
-    await evt.reply("Send me any telegram file or photo I will generate a link for it")
+    await evt.reply("Send me any telegram file or photo I will generate a link for it\n\nUse /help to see available commands.")
+
+@client.on(events.NewMessage(incoming=True, pattern=r"^\/help", func=lambda x: x.is_private and not x.file))
+async def handle_start_command(evt: events.NewMessage.Event) -> None:
+    await evt.reply("""
+Available Commands:
+/start - Start the bot
+/help - Show this help message
+/group - Start creating a group of files
+/done - Finish adding files to the group
+/myfiles - List your uploaded files
+/mygroups - List your created groups
+""")
 
 @client.on(events.NewMessage(incoming=True, func=lambda x: x.is_private and x.file))
 async def handle_file_message(evt: events.NewMessage.Event, msg=None) -> None:
     msg: Message = evt.message if not msg else msg
     user = await check_get_user(msg.sender_id, msg.id)
     if user is None:
+        return
+    if user.curt_op in [Status.GROUP_NAME, Status.GROUP]:
         return
     dc_id, location = cast(Tuple[int, InputTypeLocation], get_input_location(msg.media))
     file_info = FileInfo(
@@ -54,10 +68,6 @@ async def handle_file_message(evt: events.NewMessage.Event, msg=None) -> None:
         multi_clients[0].client_id,
         location
     )
-    if user.curt_op == Status.GROUP and user.op_id != 0:
-        await DB.db.link_file_group(user.op_id, file_info.id)
-        await evt.reply(f"Added to group. Send more files or /done to finish.")
-        return
     await DB.db.link_user_file(
         file_info.id,msg.sender_id, msg.id, msg.chat_id
     )
@@ -74,8 +84,9 @@ async def handle_group_command(evt: events.NewMessage.Event) -> None:
         return
     if user.curt_op == Status.NO_OP:
         user.curt_op = Status.GROUP
+        user.op_id = msg.id
         await DB.db.upsert_user(user)
-        await evt.reply("Send me the name for your group of files")
+        await evt.reply("Send files to add to the group. When done, send /done")
     else:
         await evt.reply("You are already in an operation. Please complete it before starting a new one.")
 
@@ -88,14 +99,45 @@ async def handle_done_command(evt: events.NewMessage.Event) -> None:
     if user.curt_op == Status.NO_OP:
         await evt.reply("You are not in any operation.")
     elif user.curt_op == Status.GROUP:
-        if user.op_id == 0:
-            return await evt.reply("You did not send any group name")
-        url = f"{Config.PUBLIC_URL}/group/{msg.sender_id}/{user.op_id}"
-        user.curt_op = Status.NO_OP
-        user.op_id = 0
+        min_id = user.op_id+1
+        max_id = msg.id
+        order=0
+        group_id = await DB.db.create_group(user.user_id, msg.id)
+        file_msgs = await client.get_messages(
+            entity=msg.chat_id,
+            ids=range(min_id, max_id),
+        )
+        for file_msg in file_msgs:
+            if not file_msg.file:
+                continue
+            dc_id, location = cast(Tuple[int, InputTypeLocation], get_input_location(file_msg.media))
+            file_info = FileInfo(
+                id=location.id,
+                dc_id=dc_id,
+                file_size=file_msg.file.size,
+                mime_type=file_msg.file.mime_type,
+                file_name=file_msg.file.name or f"{location.id}{file_msg.file.ext or ''}",
+                thumb_size=location.thumb_size,
+                is_deleted=False
+            )
+            await DB.db.add_file(file_info)
+            await DB.db.upsert_location(
+                multi_clients[0].client_id,
+                location
+            )
+            order+=1
+            await DB.db.link_file_group(group_id, file_info.id, order)
+        if order == 0:
+            await DB.db.delete_group(group_id, user.user_id)
+            await evt.reply("No files were added to the group. Operation cancelled.")
+            user.curt_op = Status.NO_OP
+            user.op_id = 0
+            await DB.db.upsert_user(user)
+            return
+        await evt.reply("Send a name for your group of files")
+        user.curt_op = Status.GROUP_NAME
+        user.op_id = group_id
         await DB.db.upsert_user(user)
-        await evt.reply(url)
-        log.info("Generated Group Link %s", url)
     else:
         await evt.reply("Unknown operation state.")
 
@@ -105,11 +147,14 @@ async def handle_text_message(evt: events.NewMessage.Event) -> None:
     user = await check_get_user(msg.sender_id, msg.id)
     if user is None:
         return
-    if user.curt_op == Status.GROUP and user.op_id == 0:
+    if user.curt_op == Status.GROUP_NAME:
+        group_id = user.op_id
         name = msg.text.strip()
-        group_id = await DB.db.create_group(user.user_id, name)
-        user.op_id = group_id
+        await DB.db.set_group_name(group_id, user.user_id, name)
+        user.curt_op = Status.NO_OP
+        user.op_id = 0
         await DB.db.upsert_user(user)
-        await evt.reply(f"Group '{name}' created! Now send me the files to add to this group. When done, send /done.")
+        url = f"{Config.PUBLIC_URL}/group/{msg.sender_id}/{group_id}"
+        await evt.reply(f"Group '{name}' created!\n{url}")
     else:
         await evt.reply("Unknown command")

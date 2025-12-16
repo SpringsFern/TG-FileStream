@@ -27,6 +27,7 @@ InputMedia = Union[types.Document, types.Photo, types.PhotoEmpty, types.Document
 class Status(Enum):
     NO_OP=0
     GROUP=1
+    GROUP_NAME=2
 
 @dataclass
 class FileInfo:

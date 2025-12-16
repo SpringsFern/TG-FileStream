@@ -43,7 +43,7 @@ async def handle_file_request(req: web.Request) -> web.Response:
     transfer: ParallelTransferrer = min(multi_clients, key=lambda c: c.users)
     logging.debug("Using client %s", transfer.client_id)
 
-    file: FileInfo = await DB.db.get_file(file_id)
+    file: FileInfo = await DB.db.get_file(file_id, user_id)
 
     size = file.file_size
     from_bytes = req.http_range.start or 0

@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import asyncio
 import datetime
 import aiomysql
 from typing import AsyncGenerator, Tuple, Optional
@@ -24,6 +25,8 @@ from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
 from tgfs.types import FileSource, GroupInfo, FileInfo, InputTypeLocation
 
 class FileDB:
+    _list_lock = asyncio.Lock()
+
     async def add_file(self, file: FileInfo) -> None:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -72,33 +75,56 @@ class FileDB:
                     await conn.rollback()
                     raise
 
-    async def get_file(self, file_id: int) -> Optional[FileInfo]:
+    async def get_file(self, file_id: int, user_id: int) -> Optional[FileInfo]:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
                     """
-                    SELECT id AS file_id,
-                           dc_id, size AS file_size, mime_type, file_name, thumb_size, is_deleted
-                    FROM FILE
-                    WHERE id = %s
+                    SELECT f.id AS file_id,
+                           f.dc_id,
+                           f.size AS file_size,
+                           f.mime_type,
+                           f.file_name,
+                           f.thumb_size,
+                           f.is_deleted
+                    FROM FILE f
+                    WHERE f.id = %s
+                      AND (
+                            EXISTS (
+                                SELECT 1
+                                FROM USER_FILE uf
+                                WHERE uf.id = f.id
+                                  AND uf.user_id = %s
+                            )
+                            OR
+                            EXISTS (
+                                SELECT 1
+                                FROM FILE_GROUP_FILE gff
+                                JOIN FILE_GROUP fg ON fg.group_id = gff.group_id
+                                WHERE gff.id = f.id
+                                  AND fg.user_id = %s
+                            )
+                          )
                     LIMIT 1
                     """,
-                    (file_id, )
+                    (file_id, user_id, user_id)
                 )
+    
                 row = await cur.fetchone()
                 if not row:
                     return None
-
+    
                 return FileInfo(
-                    id = int(row["file_id"]),
-                    dc_id = int(row["dc_id"]),
-                    file_size = int(row["file_size"]),
-                    mime_type = row["mime_type"],
-                    file_name = row["file_name"],
-                    thumb_size = row["thumb_size"],
-                    is_deleted = bool(row["is_deleted"])
+                    id=int(row["file_id"]),
+                    dc_id=int(row["dc_id"]),
+                    file_size=int(row["file_size"]),
+                    mime_type=row["mime_type"],
+                    file_name=row["file_name"],
+                    thumb_size=row["thumb_size"],
+                    is_deleted=bool(row["is_deleted"]),
                 )
-            
+
+
     async def get_location(self, file: FileInfo, bot_id: int) -> Optional[InputTypeLocation]:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
@@ -163,16 +189,16 @@ class FileDB:
                     await conn.rollback()
                     raise
 
-    async def create_group(self, user_id: int, name: str, is_group: bool = True) -> int:
+    async def create_group(self, user_id: int, name: str) -> int:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 try:
                     await cur.execute(
                         """
-                        INSERT INTO FILE_GROUP (user_id, name, is_group)
-                        VALUES (%s, %s, %s)
+                        INSERT INTO FILE_GROUP (user_id, name)
+                        VALUES (%s, %s)
                         """,
-                        (user_id, name, is_group)
+                        (user_id, name)
                     )
                     group_id = cur.lastrowid
                     await conn.commit()
@@ -182,48 +208,49 @@ class FileDB:
                     raise
 
     async def link_file_group(self, group_id: int, file_id: int, order: Optional[int] = None) -> None:
-        async with self._pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                try:
-                    if order is None:
+        async with self._list_lock:
+            async with self._pool.acquire() as conn:
+                async with conn.cursor() as cur:
+                    try:
+                        if order is None:
+                            await cur.execute(
+                                """
+                                SELECT COALESCE(MAX(order_index), 0) + 1
+                                FROM FILE_GROUP_FILE
+                                WHERE group_id = %s
+                                FOR UPDATE
+                                """,
+                                (group_id,)
+                            )
+                            row = await cur.fetchone()
+                            order = int(row[0]) if row else 1
+
                         await cur.execute(
                             """
-                            SELECT COALESCE(MAX(order_index), 0) + 1
-                            FROM FILE_GROUP_FILE
-                            WHERE group_id = %s
-                            FOR UPDATE
+                            INSERT INTO FILE_GROUP_FILE (group_id, id, order_index)
+                            VALUES (%s, %s, %s)
+                            ON DUPLICATE KEY UPDATE
+                              order_index = VALUES(order_index)
                             """,
-                            (group_id,)
+                            (group_id, file_id, order)
                         )
-                        row = await cur.fetchone()
-                        order = int(row[0]) if row else 1
 
-                    await cur.execute(
-                        """
-                        INSERT INTO FILE_GROUP_FILE (group_id, id, order_index)
-                        VALUES (%s, %s, %s)
-                        ON DUPLICATE KEY UPDATE
-                          order_index = VALUES(order_index)
-                        """,
-                        (group_id, file_id, order)
-                    )
+                        await conn.commit()
+                    except Exception:
+                        await conn.rollback()
+                        raise
 
-                    await conn.commit()
-                except Exception:
-                    await conn.rollback()
-                    raise
-
-    async def get_groups(self, user_id: int, is_group: bool = True) -> AsyncGenerator[Tuple[int, str], None]:
+    async def get_groups(self, user_id: int) -> AsyncGenerator[Tuple[int, str], None]:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.SSCursor) as cur:
                 await cur.execute(
                     """
                     SELECT group_id, name
                     FROM FILE_GROUP
-                    WHERE user_id = %s AND is_group = %s
+                    WHERE user_id = %s AND is_group = TRUE
                     ORDER BY created_at DESC
                     """,
-                    (user_id, is_group)
+                    (user_id,)
                 )
                 while True:
                     row = await cur.fetchone()
@@ -292,10 +319,19 @@ class FileDB:
                     file_id, file_name = row
                     yield (int(file_id), str(file_name))
 
-    async def total_files(self, user_id: int, is_group: Optional[bool] = None) -> int:
+    async def total_files(self, user_id: int, is_group: bool = False) -> int:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
-                if is_group is None:
+                if is_group:
+                    await cur.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM FILE_GROUP
+                        WHERE user_id = %s AND is_group = TRUE
+                        """,
+                        (user_id,)
+                    )
+                else:
                     await cur.execute(
                         """
                         SELECT COUNT(*)
@@ -304,16 +340,39 @@ class FileDB:
                         """,
                         (user_id,)
                     )
-                else:
-                    await cur.execute(
-                        """
-                        SELECT COUNT(*)
-                        FROM FILE_GROUP
-                        WHERE user_id = %s AND is_group = %s
-                        """,
-                        (user_id, is_group)
-                    )
 
                 row = await cur.fetchone()
                 return int(row[0]) if row else 0
 
+    async def delete_group(self, group_id: int, user_id: int) -> None:
+        async with self._pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                try:
+                    await cur.execute(
+                        """
+                        DELETE FROM FILE_GROUP
+                        WHERE group_id = %s AND user_id = %s
+                        """,
+                        (group_id, user_id)
+                    )
+                    await conn.commit()
+                except Exception:
+                    await conn.rollback()
+                    raise
+
+    async def set_group_name(self, group_id: int, user_id: int, name: str) -> None:
+        async with self._pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                try:
+                    await cur.execute(
+                        """
+                        UPDATE FILE_GROUP
+                        SET name = %s
+                        WHERE group_id = %s AND user_id = %s
+                        """,
+                        (name, group_id, user_id)
+                    )
+                    await conn.commit()
+                except Exception:
+                    await conn.rollback()
+                    raise

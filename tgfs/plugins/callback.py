@@ -62,7 +62,7 @@ async def handle_done_command(evt: events.CallbackQuery.Event) -> None:
 async def handle_buttons(evt: events.CallbackQuery.Event):
     file_id = int(evt.pattern_match.group(1))
     user_id = evt.sender_id
-    file_info = await DB.db.get_file(file_id)
+    file_info = await DB.db.get_file(file_id, user_id)
     if file_info is None:
         await evt.answer("File not found.")
         return
