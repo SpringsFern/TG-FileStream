@@ -72,7 +72,7 @@ async def handle_file_request(req: web.Request) -> web.Response:
     })
 
 @routes.get("/group/{user_id}/{group_id}")
-async def handle_file_request(req: web.Request) -> web.Response:
+async def handle_group_request(req: web.Request) -> web.Response:
     head: bool = req.method == "HEAD"
     user_id = int(req.match_info["user_id"])
     group_id = int(req.match_info["group_id"])

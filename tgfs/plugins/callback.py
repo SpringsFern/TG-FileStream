@@ -27,7 +27,7 @@ from tgfs.database import DB
 log = logging.getLogger(__name__)
 
 @client.on(events.CallbackQuery(pattern=r"^tos_agree_[1-9]\d{0,19}$"))
-async def handle_buttons(evt: events.CallbackQuery.Event):
+async def handle_tos_button(evt: events.CallbackQuery.Event):
     callback_data = evt.data.decode('utf-8')
     log.debug("Callback data: %s", callback_data)
     user_id = evt.sender_id
@@ -40,7 +40,7 @@ async def handle_buttons(evt: events.CallbackQuery.Event):
     await evt.edit(buttons=[[Button.inline("Agreed", b"tos_agreed")]])
 
 @client.on(events.CallbackQuery(pattern=r"^fileinfo$"))
-async def handle_done_command(evt: events.CallbackQuery.Event) -> None:
+async def handle_filelist_button(evt: events.CallbackQuery.Event) -> None:
     user_id = evt.sender_id
     total_files = await DB.db.total_files(user_id)
     if total_files == 0:
@@ -59,7 +59,7 @@ async def handle_done_command(evt: events.CallbackQuery.Event) -> None:
     )
 
 @client.on(events.CallbackQuery(pattern=r"^fileinfo_(\d+)$"))
-async def handle_buttons(evt: events.CallbackQuery.Event):
+async def handle_fileinfo_button(evt: events.CallbackQuery.Event):
     file_id = int(evt.pattern_match.group(1))
     user_id = evt.sender_id
     file_info = await DB.db.get_file(file_id, user_id)
@@ -82,7 +82,7 @@ async def handle_buttons(evt: events.CallbackQuery.Event):
     )
 
 @client.on(events.CallbackQuery(pattern=r"^groupinfo_(\d+)$"))
-async def handle_buttons(evt: events.CallbackQuery.Event):
+async def handle_groupinfo_button(evt: events.CallbackQuery.Event):
     file_id = int(evt.pattern_match.group(1))
     user_id = evt.sender_id
     file_info = await DB.db.get_group(file_id, user_id)

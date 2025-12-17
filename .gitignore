@@ -3,3 +3,5 @@
 *.env
 test.py
 __pycache__
+
+tgfs/patches/*.py

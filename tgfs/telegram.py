@@ -19,6 +19,7 @@ import importlib.util
 import logging
 
 from pathlib import Path
+import sys
 from typing import Optional
 from telethon import TelegramClient, functions
 from telethon.sessions import MemorySession
@@ -74,8 +75,12 @@ def load_plugins(folder_path: str) -> None:
     package_prefix = ".".join(folder.parts)
     for file in folder.glob("*.py"):
         module_name = f"{package_prefix}.{file.stem}"
+        if module_name in sys.modules:
+            log.debug("Already Imported %s, skipping", module_name)
+            continue
         spec = importlib.util.spec_from_file_location(module_name, str(file))
         module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
         module.__package__ = package_prefix
         spec.loader.exec_module(module)
         log.info("Imported %s", module_name)

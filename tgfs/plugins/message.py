@@ -34,7 +34,7 @@ async def handle_start_command(evt: events.NewMessage.Event) -> None:
     await evt.reply("Send me any telegram file or photo I will generate a link for it\n\nUse /help to see available commands.")
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^\/help", func=lambda x: x.is_private and not x.file))
-async def handle_start_command(evt: events.NewMessage.Event) -> None:
+async def handle_help_command(evt: events.NewMessage.Event) -> None:
     await evt.reply("""
 Available Commands:
 /start - Start the bot
