@@ -17,7 +17,7 @@
 import logging
 from typing import Tuple, cast
 
-from telethon import events, Button
+from telethon import events
 from telethon.custom import Message
 from telethon.utils import get_input_location
 
@@ -91,9 +91,9 @@ async def handle_group_command(evt: events.NewMessage.Event) -> None:
         await evt.reply("You are already in an operation. Please complete it before starting a new one.")
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^\/done", func=lambda x: x.is_private and not x.file))
-async def handle_done_command(evt: events.NewMessage.Event) -> None:
+async def handle_done_command(evt: events.NewMessage.Event, user = None, is_group = True) -> None:
     msg: Message = evt.message
-    user = await check_get_user(msg.sender_id, msg.id)
+    user = user or await check_get_user(msg.sender_id, msg.id)
     if user is None:
         return
     if user.curt_op == Status.NO_OP:
@@ -102,7 +102,7 @@ async def handle_done_command(evt: events.NewMessage.Event) -> None:
         min_id = user.op_id+1
         max_id = msg.id
         order=0
-        group_id = await DB.db.create_group(user.user_id, msg.id)
+        group_id = await DB.db.create_group(user.user_id, msg.id, is_group)
         file_msgs = await client.get_messages(
             entity=msg.chat_id,
             ids=range(min_id, max_id),
@@ -150,7 +150,7 @@ async def handle_text_message(evt: events.NewMessage.Event) -> None:
     if user.curt_op == Status.GROUP_NAME:
         group_id = user.op_id
         name = msg.text.strip()
-        await DB.db.set_group_name(group_id, user.user_id, name)
+        await DB.db.update_group_name(group_id, user.user_id, name)
         user.curt_op = Status.NO_OP
         user.op_id = 0
         await DB.db.upsert_user(user)

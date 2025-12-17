@@ -15,16 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from typing import List, Tuple, cast
+from typing import List
 
 from telethon import events, Button
 from telethon.custom import Message
-from telethon.utils import get_input_location
 
-from tgfs.config import Config
-from tgfs.telegram import client, multi_clients
+from tgfs.telegram import client
 from tgfs.database import DB
-from tgfs.types import FileInfo, InputTypeLocation, Status
 from tgfs.utils import check_get_user
 
 log = logging.getLogger(__name__)

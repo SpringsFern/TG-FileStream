@@ -19,10 +19,9 @@ import datetime
 import aiomysql
 from typing import AsyncGenerator, Tuple, Optional
 
-from pyparsing import Union
 from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
 
-from tgfs.types import FileSource, GroupInfo, FileInfo, InputTypeLocation
+from tgfs.types import FileSource, FileInfo, InputTypeLocation
 
 class FileDB:
     _list_lock = asyncio.Lock()
@@ -189,117 +188,6 @@ class FileDB:
                     await conn.rollback()
                     raise
 
-    async def create_group(self, user_id: int, name: str) -> int:
-        async with self._pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                try:
-                    await cur.execute(
-                        """
-                        INSERT INTO FILE_GROUP (user_id, name)
-                        VALUES (%s, %s)
-                        """,
-                        (user_id, name)
-                    )
-                    group_id = cur.lastrowid
-                    await conn.commit()
-                    return group_id
-                except Exception:
-                    await conn.rollback()
-                    raise
-
-    async def link_file_group(self, group_id: int, file_id: int, order: Optional[int] = None) -> None:
-        async with self._list_lock:
-            async with self._pool.acquire() as conn:
-                async with conn.cursor() as cur:
-                    try:
-                        if order is None:
-                            await cur.execute(
-                                """
-                                SELECT COALESCE(MAX(order_index), 0) + 1
-                                FROM FILE_GROUP_FILE
-                                WHERE group_id = %s
-                                FOR UPDATE
-                                """,
-                                (group_id,)
-                            )
-                            row = await cur.fetchone()
-                            order = int(row[0]) if row else 1
-
-                        await cur.execute(
-                            """
-                            INSERT INTO FILE_GROUP_FILE (group_id, id, order_index)
-                            VALUES (%s, %s, %s)
-                            ON DUPLICATE KEY UPDATE
-                              order_index = VALUES(order_index)
-                            """,
-                            (group_id, file_id, order)
-                        )
-
-                        await conn.commit()
-                    except Exception:
-                        await conn.rollback()
-                        raise
-
-    async def get_groups(self, user_id: int) -> AsyncGenerator[Tuple[int, str], None]:
-        async with self._pool.acquire() as conn:
-            async with conn.cursor(aiomysql.SSCursor) as cur:
-                await cur.execute(
-                    """
-                    SELECT group_id, name
-                    FROM FILE_GROUP
-                    WHERE user_id = %s AND is_group = TRUE
-                    ORDER BY created_at DESC
-                    """,
-                    (user_id,)
-                )
-                while True:
-                    row = await cur.fetchone()
-                    if not row:
-                        break
-                    group_id, name = row
-                    yield (group_id, name)
-
-    async def get_group(self, group_id: int, user_id: int) -> Optional[GroupInfo]:
-        async with self._pool.acquire() as conn:
-            async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute(
-                    """
-                    SELECT group_id, user_id, name, is_group, created_at
-                    FROM FILE_GROUP
-                    WHERE group_id = %s AND user_id = %s
-                    LIMIT 1
-                    """,
-                    (group_id, user_id)
-                )
-                row = await cur.fetchone()
-                if not row:
-                    return None
-
-                gi = GroupInfo(
-                    group_id=int(row["group_id"]),
-                    user_id=int(row["user_id"]),
-                    name=row["name"],
-                    is_group=bool(row["is_group"]),
-                    created_at=row.get("created_at"),
-                    files=[]
-                )
-
-                await cur.execute(
-                    """
-                    SELECT id
-                    FROM FILE_GROUP_FILE
-                    WHERE group_id = %s
-                    ORDER BY order_index ASC
-                    """,
-                    (group_id,)
-                )
-                rows = await cur.fetchall()
-                if not rows:
-                    return gi
-
-                gi.files.extend([int(r["id"]) for r in rows])
-                return gi
-
     async def get_files(self, user_id: int) -> AsyncGenerator[Tuple[int, str], None]:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.SSCursor) as cur:
@@ -319,19 +207,10 @@ class FileDB:
                     file_id, file_name = row
                     yield (int(file_id), str(file_name))
 
-    async def total_files(self, user_id: int, is_group: bool = False) -> int:
+    async def total_files(self, user_id: int, is_group: Optional[bool] = None) -> int:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
-                if is_group:
-                    await cur.execute(
-                        """
-                        SELECT COUNT(*)
-                        FROM FILE_GROUP
-                        WHERE user_id = %s AND is_group = TRUE
-                        """,
-                        (user_id,)
-                    )
-                else:
+                if is_group is None:
                     await cur.execute(
                         """
                         SELECT COUNT(*)
@@ -340,39 +219,15 @@ class FileDB:
                         """,
                         (user_id,)
                     )
+                else:
+                    await cur.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM FILE_GROUP
+                        WHERE user_id = %s AND is_group = %s
+                        """,
+                        (user_id, is_group)
+                    )
 
                 row = await cur.fetchone()
                 return int(row[0]) if row else 0
-
-    async def delete_group(self, group_id: int, user_id: int) -> None:
-        async with self._pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                try:
-                    await cur.execute(
-                        """
-                        DELETE FROM FILE_GROUP
-                        WHERE group_id = %s AND user_id = %s
-                        """,
-                        (group_id, user_id)
-                    )
-                    await conn.commit()
-                except Exception:
-                    await conn.rollback()
-                    raise
-
-    async def set_group_name(self, group_id: int, user_id: int, name: str) -> None:
-        async with self._pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                try:
-                    await cur.execute(
-                        """
-                        UPDATE FILE_GROUP
-                        SET name = %s
-                        WHERE group_id = %s AND user_id = %s
-                        """,
-                        (name, group_id, user_id)
-                    )
-                    await conn.commit()
-                except Exception:
-                    await conn.rollback()
-                    raise

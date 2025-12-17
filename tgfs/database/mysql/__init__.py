@@ -18,8 +18,9 @@
 import aiomysql
 from .file import FileDB
 from .user import UserDB
+from .group import GroupDB
 
-class MySQLDB(FileDB, UserDB):
+class MySQLDB(FileDB, GroupDB, UserDB):
     _pool: aiomysql.Pool
 
     async def connect(self, *, host: str, port: int = 3306, user: str, password: str,
