@@ -16,11 +16,13 @@
 
 # from abc import ABC, abstractmethod
 import aiomysql
+
 from .file import FileDB
 from .user import UserDB
 from .group import GroupDB
+from .utils import UtilDB
 
-class MySQLDB(FileDB, GroupDB, UserDB):
+class MySQLDB(FileDB, GroupDB, UserDB, UtilDB):
     _pool: aiomysql.Pool
 
     async def connect(self, *, host: str, port: int = 3306, user: str, password: str,

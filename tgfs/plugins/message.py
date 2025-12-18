@@ -25,7 +25,7 @@ from tgfs.config import Config
 from tgfs.telegram import client, multi_clients
 from tgfs.database import DB
 from tgfs.types import FileInfo, InputTypeLocation, Status
-from tgfs.utils import check_get_user
+from tgfs.utils import check_get_user, make_token
 
 log = logging.getLogger(__name__)
 
@@ -72,7 +72,8 @@ async def handle_file_message(evt: events.NewMessage.Event, msg=None) -> None:
         file_info.id,msg.sender_id, msg.id, msg.chat_id
     )
     # fwd_msg: Message = await msg.forward_to(Config.BIN_CHANNEL)
-    url = f"{Config.PUBLIC_URL}/dl/{msg.sender_id}/{file_info.id}"
+    token = make_token(msg.sender_id, file_info.id)
+    url = f"{Config.PUBLIC_URL}/dl/{token}"
     await evt.reply(url)
     log.info("Generated Link %s", url)
 
@@ -154,7 +155,8 @@ async def handle_text_message(evt: events.NewMessage.Event) -> None:
         user.curt_op = Status.NO_OP
         user.op_id = 0
         await DB.db.upsert_user(user)
-        url = f"{Config.PUBLIC_URL}/group/{msg.sender_id}/{group_id}"
+        token = make_token(user.user_id, group_id)
+        url = f"{Config.PUBLIC_URL}/group/{token}"
         await evt.reply(f"Group '{name}' created!\n{url}")
     else:
         await evt.reply("Unknown command")

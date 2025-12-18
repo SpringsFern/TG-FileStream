@@ -50,7 +50,6 @@ async def _start_client(token: str) -> Optional[ParallelTransferrer]:
         await bot.start(bot_token=token)
         # https://github.com/LonamiWebs/Telethon/blob/59da66e105ba29eee7760538409181859c7d310d/telethon/client/downloads.py#L62
         config = await bot(functions.help.GetConfigRequest())
-        print(type(config))
         for option in config.dc_options:
             if option.ip_address == bot.session.server_address:
                 bot.session.set_dc(

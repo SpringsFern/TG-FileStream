@@ -18,8 +18,9 @@ import logging
 import asyncio
 from aiohttp import web
 
+from tgfs.config import Config
 from tgfs.paralleltransfer import ParallelTransferrer
-from tgfs.utils import update_location
+from tgfs.utils import make_token, parse_token, update_location
 from tgfs.telegram import multi_clients
 from tgfs.database import DB
 from tgfs.types import FileInfo
@@ -34,16 +35,21 @@ async def handle_root(_: web.Request):
     return web.json_response({transfer.client_id: [transfer.users] for transfer in multi_clients})
 
 # @routes.get(r"/{msg_id:-?\d+}/{name}")
-@routes.get("/dl/{user_id}/{file_id}")
+@routes.get("/dl/{payload}/{sig}")
 async def handle_file_request(req: web.Request) -> web.Response:
     head: bool = req.method == "HEAD"
-    user_id = int(req.match_info["user_id"])
-    file_id = int(req.match_info["file_id"])
-
+    payload = req.match_info["payload"]
+    sig = req.match_info["sig"]
+    pt = parse_token(payload, sig)
+    if not pt:
+        return web.Response(status=404, text="File not found")
+    user_id, file_id = pt
     transfer: ParallelTransferrer = min(multi_clients, key=lambda c: c.users)
     logging.debug("Using client %s", transfer.client_id)
 
-    file: FileInfo = await DB.db.get_file(file_id, user_id)
+    file = await DB.db.get_file(file_id, user_id)
+    if not file:
+        return web.Response(status=404, text="File not found")
 
     size = file.file_size
     from_bytes = req.http_range.start or 0
@@ -71,13 +77,17 @@ async def handle_file_request(req: web.Request) -> web.Response:
         "Accept-Ranges": "bytes",
     })
 
-@routes.get("/group/{user_id}/{group_id}")
+@routes.get("/group/{payload}/{sig}")
 async def handle_group_request(req: web.Request) -> web.Response:
     head: bool = req.method == "HEAD"
-    user_id = int(req.match_info["user_id"])
-    group_id = int(req.match_info["group_id"])
+    payload = req.match_info["payload"]
+    sig = req.match_info["sig"]
+    pt = parse_token(payload, sig)
+    if not pt:
+        return web.Response(status=404, text="File not found")
+    user_id, group_id = pt
     group = await DB.db.get_group(group_id, user_id)
     if group is None:
         return web.Response(status=404, text="Group not found")
-    resp = "".join(f"{req.scheme}://{req.host}/dl/{user_id}/{file_id}\n" for file_id in group.files)
+    resp = "".join(f"{Config.PUBLIC_URL}/dl/{make_token(user_id, file_id)}\n" for file_id in group.files)
     return web.Response(status=200, text=resp)

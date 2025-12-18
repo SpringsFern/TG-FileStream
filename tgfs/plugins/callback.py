@@ -22,7 +22,7 @@ from telethon import Button, events
 from tgfs.config import Config
 from tgfs.telegram import client
 from tgfs.database import DB
-# from tgfs.plugins.message import handle_file_message
+from tgfs.utils import make_token
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +66,8 @@ async def handle_fileinfo_button(evt: events.CallbackQuery.Event):
     if file_info is None:
         await evt.answer("File not found.")
         return
+    token = make_token(user_id, file_info.id)
+    url = f"{Config.PUBLIC_URL}/dl/{token}"
     await evt.edit(
         f"File Info:\n"
         f"ID: {file_info.id}\n"
@@ -76,7 +78,7 @@ async def handle_fileinfo_button(evt: events.CallbackQuery.Event):
         f"File Type: {'Photo' if file_info.thumb_size else 'Document'}\n"
         f"Is Restricted: {'Yes' if file_info.is_deleted else 'No'}",
         buttons=[
-            [Button.url(file_info.file_name, f"{Config.PUBLIC_URL}/dl/{user_id}/{file_info.id}")],
+            [Button.url(file_info.file_name, url)],
             [Button.inline("Back", b"fileinfo")]
         ]
     )
@@ -89,10 +91,12 @@ async def handle_groupinfo_button(evt: events.CallbackQuery.Event):
     if file_info is None:
         await evt.answer("Group not found.")
         return
-    buttons: List[List[Button]] = []
+    token = make_token(user_id, file_info.group_id)
+    buttons: List[List[Button]] = [
+        [Button.url("Open", f"{Config.PUBLIC_URL}/group/{token}")]
+    ]
     for file_id in file_info.files or []:
         buttons.append([Button.inline(str(file_id), f"fileinfo_{file_id}")])
-    buttons.append([Button.url("Open", f"{Config.PUBLIC_URL}/group/{user_id}/{file_info.group_id}")])
     await evt.edit(
         f"Group Info:\n"
         f"Name: {file_info.name}\n"

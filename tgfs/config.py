@@ -59,3 +59,5 @@ class Config:
     DB_PASS: str = environ["DB_PASS"]
     DB_NAME: str = environ["DB_NAME"]
     DB_PORT: int = int(environ.get("DB_PORT", 3306))
+
+    SECRET: bytes = None

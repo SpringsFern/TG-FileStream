@@ -27,7 +27,8 @@ from tgfs.paralleltransfer import ParallelTransferrer
 from tgfs.telegram import client, load_plugins, multi_clients, start_clients
 from tgfs.routes import routes
 from tgfs.database import DB
-from tgfs import patches
+from tgfs.utils import load_configs
+load_plugins('tgfs/patches')
 
 app = web.Application()
 app.add_routes(routes)
@@ -35,6 +36,7 @@ runner = web.AppRunner(app)
 
 async def start() -> None:
     await DB.init()
+    await load_configs()
     await client.start(bot_token=Config.BOT_TOKEN)
     if not Config.NO_UPDATE:
         load_plugins("tgfs/plugins")

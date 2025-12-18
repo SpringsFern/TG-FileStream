@@ -67,3 +67,9 @@ CREATE TABLE IF NOT EXISTS FILE_GROUP_FILE (
 CREATE INDEX idx_fg_file ON FILE_GROUP_FILE (id);
 CREATE INDEX idx_fg_group ON FILE_GROUP_FILE (group_id);
 CREATE INDEX idx_fg_order ON FILE_GROUP_FILE (group_id, order_index);
+
+CREATE TABLE IF NOT EXISTS APP_CONFIG (
+  k VARCHAR(64) PRIMARY KEY,
+  v BLOB NOT NULL,
+  type ENUM('bytes', 'bool', 'int', 'str', 'json') NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
