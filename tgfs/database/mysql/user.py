@@ -23,7 +23,7 @@ class UserDB:
     async def get_user(self, user_id: int) -> Optional[User]:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute("SELECT user_id, join_date, ban_date, warns, preferred_lang, curt_op, op_id FROM USER WHERE user_id = %s", (user_id,))
+                await cur.execute("SELECT user_id, join_date, ban_date, warns, preferred_lang, curt_op, op_id FROM TGUSER WHERE user_id = %s", (user_id,))
                 row = await cur.fetchone()
                 if not row:
                     return None
@@ -35,7 +35,7 @@ class UserDB:
             async with conn.cursor() as cur:
                 try:
                     await cur.execute(
-                        "INSERT IGNORE INTO USER (user_id) VALUES (%s)",
+                        "INSERT IGNORE INTO TGUSER (user_id) VALUES (%s)",
                         (user_id,)
                     )
                     inserted = cur.rowcount > 0
@@ -51,7 +51,7 @@ class UserDB:
                 try:
                     await cur.execute(
                         """
-                        INSERT INTO USER (user_id, join_date, ban_date, warns, preferred_lang, curt_op, op_id)
+                        INSERT INTO TGUSER (user_id, join_date, ban_date, warns, preferred_lang, curt_op, op_id)
                         VALUES (%s, %s, %s, %s, %s, %s, %s) AS new
                         ON DUPLICATE KEY UPDATE
                           join_date = new.join_date,
@@ -72,7 +72,7 @@ class UserDB:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 try:
-                    await cur.execute("DELETE FROM USER WHERE user_id = %s", (user_id,))
+                    await cur.execute("DELETE FROM TGUSER WHERE user_id = %s", (user_id,))
                     deleted = cur.rowcount > 0
                     await conn.commit()
                     return bool(deleted)
@@ -84,7 +84,7 @@ class UserDB:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    "SELECT user_id, join_date, ban_date, warns, preferred_lang, curt_op, op_id FROM USER"
+                    "SELECT user_id, join_date, ban_date, warns, preferred_lang, curt_op, op_id FROM TGUSER"
                 )
 
                 while True:
@@ -97,6 +97,6 @@ class UserDB:
     async def count_users(self) -> int:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
-                await cur.execute("SELECT COUNT(*) FROM USER")
+                await cur.execute("SELECT COUNT(*) FROM TGUSER")
                 (count,) = await cur.fetchone()
                 return int(count)            

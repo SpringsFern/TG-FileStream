@@ -32,7 +32,7 @@ class FileDB:
                 try:
                     await cur.execute(
                         """
-                        INSERT INTO FILE (id, dc_id, size, mime_type, file_name, thumb_size, is_deleted)
+                        INSERT INTO TGFILE (id, dc_id, size, mime_type, file_name, thumb_size, is_deleted)
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                         ON DUPLICATE KEY UPDATE
                           dc_id = VALUES(dc_id),
@@ -86,7 +86,7 @@ class FileDB:
                            f.file_name,
                            f.thumb_size,
                            f.is_deleted
-                    FROM FILE f
+                    FROM TGFILE f
                     WHERE f.id = %s
                       AND (
                             EXISTS (
@@ -194,7 +194,7 @@ class FileDB:
                 await cur.execute(
                     """
                     SELECT f.id AS file_id, f.file_name
-                    FROM FILE f join USER_FILE uf ON f.id = uf.id
+                    FROM TGFILE f join USER_FILE uf ON f.id = uf.id
                     WHERE uf.user_id = %s
                     ORDER BY uf.added_at DESC
                     """,
