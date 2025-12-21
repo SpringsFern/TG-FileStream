@@ -53,6 +53,7 @@ class Config:
     DOWNLOAD_PART_SIZE: int = int(environ.get("DOWNLOAD_PART_SIZE", 1024 * 1024))
     NO_UPDATE: bool = bool(environ.get("NO_UPDATE", False))
     TOS: str = ""
+    ADMIN_IDS = {int(x) for x in environ.get("ADMIN_IDS", "").split(",") if x}
 
     DB_HOST: str = environ["DB_HOST"]
     DB_USER: str = environ["DB_USER"]
@@ -62,3 +63,4 @@ class Config:
 
     SECRET: bytes = None
     FILE_INDEX_LIMIT: int = 10
+    MAX_WARNS: int = 3

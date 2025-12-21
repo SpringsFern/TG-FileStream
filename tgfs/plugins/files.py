@@ -26,7 +26,7 @@ from tgfs.utils import check_get_user
 
 log = logging.getLogger(__name__)
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^\/files", func=lambda x: x.is_private and not x.file))
+@client.on(events.NewMessage(incoming=True, pattern=r"^/files", func=lambda x: x.is_private and not x.file))
 async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
     msg: Message = evt.message
     user = await check_get_user(msg.sender_id, msg.id)

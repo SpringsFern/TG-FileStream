@@ -21,6 +21,8 @@ from enum import Enum
 
 from telethon.tl import types
 
+from tgfs.config import Config
+
 InputTypeLocation = Union[types.InputDocumentFileLocation, types.InputPhotoFileLocation]
 InputMedia = Union[types.Document, types.Photo, types.PhotoEmpty, types.DocumentEmpty]
 
@@ -61,6 +63,10 @@ class User:
     @property
     def is_banned(self) -> bool:
         return self.ban_date is not None
+    
+    @property
+    def is_admin(self) -> bool:
+        return self.user_id in Config.ADMIN_IDS
 
     @classmethod
     def from_row(cls, row: Dict[str, Any]) -> "User":

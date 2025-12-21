@@ -17,7 +17,7 @@
 import asyncio
 import datetime
 import aiomysql
-from typing import AsyncGenerator, Tuple, Optional
+from typing import AsyncGenerator, Set, Tuple, Optional
 
 from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
 
@@ -39,7 +39,8 @@ class FileDB:
                           size = VALUES(size),
                           mime_type = VALUES(mime_type),
                           file_name = VALUES(file_name),
-                          thumb_size = VALUES(thumb_size)
+                          thumb_size = VALUES(thumb_size),
+                          is_deleted = VALUES(is_deleted)
                         """,
                         (
                             file.id, file.dc_id, file.file_size, file.mime_type,
@@ -74,40 +75,56 @@ class FileDB:
                     await conn.rollback()
                     raise
 
-    async def get_file(self, file_id: int, user_id: int) -> Optional[FileInfo]:
+    async def get_file(self, file_id: int, user_id: int = None) -> Optional[FileInfo]:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute(
-                    """
-                    SELECT f.id AS file_id,
-                           f.dc_id,
-                           f.size AS file_size,
-                           f.mime_type,
-                           f.file_name,
-                           f.thumb_size,
-                           f.is_deleted
-                    FROM TGFILE f
-                    WHERE f.id = %s
-                      AND (
-                            EXISTS (
-                                SELECT 1
-                                FROM USER_FILE uf
-                                WHERE uf.id = f.id
-                                  AND uf.user_id = %s
-                            )
-                            OR
-                            EXISTS (
-                                SELECT 1
-                                FROM FILE_GROUP_FILE gff
-                                JOIN FILE_GROUP fg ON fg.group_id = gff.group_id
-                                WHERE gff.id = f.id
-                                  AND fg.user_id = %s
-                            )
-                          )
-                    LIMIT 1
-                    """,
-                    (file_id, user_id, user_id)
-                )
+                if user_id is None:
+                    await cur.execute(
+                        """
+                        SELECT f.id AS file_id,
+                               f.dc_id,
+                               f.size AS file_size,
+                               f.mime_type,
+                               f.file_name,
+                               f.thumb_size,
+                               f.is_deleted
+                        FROM TGFILE f
+                        WHERE f.id = %s
+                        """,
+                        (file_id, )
+                    )
+                else:
+                    await cur.execute(
+                        """
+                        SELECT f.id AS file_id,
+                               f.dc_id,
+                               f.size AS file_size,
+                               f.mime_type,
+                               f.file_name,
+                               f.thumb_size,
+                               f.is_deleted
+                        FROM TGFILE f
+                        WHERE f.id = %s
+                          AND (
+                                EXISTS (
+                                    SELECT 1
+                                    FROM USER_FILE uf
+                                    WHERE uf.id = f.id
+                                      AND uf.user_id = %s
+                                )
+                                OR
+                                EXISTS (
+                                    SELECT 1
+                                    FROM FILE_GROUP_FILE gff
+                                    JOIN FILE_GROUP fg ON fg.group_id = gff.group_id
+                                    WHERE gff.id = f.id
+                                      AND fg.user_id = %s
+                                )
+                              )
+                        LIMIT 1
+                        """,
+                        (file_id, user_id, user_id)
+                    )
     
                 row = await cur.fetchone()
                 if not row:
@@ -213,6 +230,21 @@ class FileDB:
                     file_id, file_name = row
                     yield int(file_id), str(file_name)
 
+    async def get_file_users(self, file_id: int, ) -> Set[int]:
+        async with self._pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    SELECT user_id
+                    FROM USER_FILE
+                    WHERE id = %s
+                    """,
+                    (file_id)
+                )
+
+                rows = await cur.fetchall()
+                return {col[0] for col in rows}
+
     async def total_files(self, user_id: int, is_group: Optional[bool] = None) -> int:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -237,3 +269,38 @@ class FileDB:
 
                 row = await cur.fetchone()
                 return int(row[0]) if row else 0
+
+    async def delete_file(self, file_id: int, user_id: int = None) -> bool:
+        async with self._pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                try:
+                    await cur.execute(
+                        """
+                        DELETE FROM TGFILE f
+                        WHERE f.id = %s
+                          AND (
+                                EXISTS (
+                                    SELECT 1
+                                    FROM USER_FILE uf
+                                    WHERE uf.id = f.id
+                                      AND uf.user_id = %s
+                                )
+                                OR
+                                EXISTS (
+                                    SELECT 1
+                                    FROM FILE_GROUP_FILE gff
+                                    JOIN FILE_GROUP fg ON fg.group_id = gff.group_id
+                                    WHERE gff.id = f.id
+                                      AND fg.user_id = %s
+                                )
+                              )
+                        LIMIT 1
+                        """,
+                        (file_id, user_id, user_id)
+                    )
+                    deleted = bool(cur.rowcount > 0)
+                    await conn.commit()
+                    return deleted
+                except Exception:
+                    await conn.rollback()
+                    raise

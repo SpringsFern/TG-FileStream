@@ -45,7 +45,7 @@ class UserDB:
                     await conn.rollback()
                     raise
 
-    async def upsert_user(self, user: User) -> None:
+    async def upsert_user(self, user: User) -> bool:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 try:
@@ -64,6 +64,7 @@ class UserDB:
                         (user.user_id, user.join_date, user.ban_date, user.warns, user.preferred_lang, user.curt_op.value, user.op_id)
                     )
                     await conn.commit()
+                    return True
                 except Exception:
                     await conn.rollback()
                     raise

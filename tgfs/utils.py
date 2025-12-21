@@ -18,7 +18,7 @@ import base64
 import hashlib
 import hmac
 import struct
-from typing import cast
+from typing import Optional, cast
 
 from telethon import Button
 from telethon.utils import get_input_location
@@ -72,14 +72,15 @@ def make_token(user_id: int, file_id: int) -> str:
     )
     return token
 
-def parse_token(p_b64: str, s_b64: str) -> tuple[int, int] | None:
+def parse_token(p_b64: str, s_b64: Optional[str] = None) -> tuple[int, int] | None:
     try:
         payload = base64_decode(p_b64)
         sig = base64_decode(s_b64)
 
-        expected = hmac.new(Config.SECRET, payload, hashlib.sha256).digest()
-        if not hmac.compare_digest(sig, expected):
-            return None
+        if s_b64 is not None:
+            expected = hmac.new(Config.SECRET, payload, hashlib.sha256).digest()
+            if not hmac.compare_digest(sig, expected):
+                return None
 
         user_id, file_id = struct.unpack(">QQ", payload)
         return user_id, file_id

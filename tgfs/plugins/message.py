@@ -29,11 +29,11 @@ from tgfs.utils import check_get_user, make_token
 
 log = logging.getLogger(__name__)
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^\/start", func=lambda x: x.is_private and not x.file))
+@client.on(events.NewMessage(incoming=True, pattern=r"^/start", func=lambda x: x.is_private and not x.file))
 async def handle_start_command(evt: events.NewMessage.Event) -> None:
     await evt.reply("Send me any telegram file or photo I will generate a link for it\n\nUse /help to see available commands.")
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^\/help", func=lambda x: x.is_private and not x.file))
+@client.on(events.NewMessage(incoming=True, pattern=r"^/help", func=lambda x: x.is_private and not x.file))
 async def handle_help_command(evt: events.NewMessage.Event) -> None:
     await evt.reply("""
 Available Commands:
@@ -77,7 +77,7 @@ async def handle_file_message(evt: events.NewMessage.Event, msg=None) -> None:
     await evt.reply(url)
     log.info("Generated Link %s", url)
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^\/group", func=lambda x: x.is_private and not x.file))
+@client.on(events.NewMessage(incoming=True, pattern=r"^/group", func=lambda x: x.is_private and not x.file))
 async def handle_group_command(evt: events.NewMessage.Event) -> None:
     msg: Message = evt.message
     user = await check_get_user(msg.sender_id, msg.id)
@@ -91,7 +91,7 @@ async def handle_group_command(evt: events.NewMessage.Event) -> None:
     else:
         await evt.reply("You are already in an operation. Please complete it before starting a new one.")
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^\/done", func=lambda x: x.is_private and not x.file))
+@client.on(events.NewMessage(incoming=True, pattern=r"^/done", func=lambda x: x.is_private and not x.file))
 async def handle_done_command(evt: events.NewMessage.Event, user = None, is_group = True) -> None:
     msg: Message = evt.message
     user = user or await check_get_user(msg.sender_id, msg.id)
