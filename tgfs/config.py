@@ -61,3 +61,4 @@ class Config:
     DB_PORT: int = int(environ.get("DB_PORT", 3306))
 
     SECRET: bytes = None
+    FILE_INDEX_LIMIT: int = 10

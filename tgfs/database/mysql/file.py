@@ -188,24 +188,30 @@ class FileDB:
                     await conn.rollback()
                     raise
 
-    async def get_files(self, user_id: int) -> AsyncGenerator[Tuple[int, str], None]:
+    async def get_files(self, user_id: int, offset: int = 0, limit: Optional[int] = None
+    ) -> AsyncGenerator[Tuple[int, str], None]:
+
+        base_sql = """
+            SELECT f.id AS file_id, f.file_name
+            FROM TGFILE f
+            JOIN USER_FILE uf ON f.id = uf.id
+            WHERE uf.user_id = %s
+            ORDER BY uf.added_at DESC
+        """
+
+        params = [user_id]
+
+        if limit is not None:
+            base_sql += " LIMIT %s OFFSET %s"
+            params.extend([limit, offset])
+
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.SSCursor) as cur:
-                await cur.execute(
-                    """
-                    SELECT f.id AS file_id, f.file_name
-                    FROM TGFILE f join USER_FILE uf ON f.id = uf.id
-                    WHERE uf.user_id = %s
-                    ORDER BY uf.added_at DESC
-                    """,
-                    (user_id,)
-                )
-                while True:
-                    row = await cur.fetchone()
-                    if not row:
-                        break
+                await cur.execute(base_sql, params)
+
+                async for row in cur:
                     file_id, file_name = row
-                    yield (int(file_id), str(file_name))
+                    yield int(file_id), str(file_name)
 
     async def total_files(self, user_id: int, is_group: Optional[bool] = None) -> int:
         async with self._pool.acquire() as conn:

@@ -74,24 +74,25 @@ class GroupDB:
                         await conn.rollback()
                         raise
 
-    async def get_groups(self, user_id: int, is_group: bool = True) -> AsyncGenerator[Tuple[int, str], None]:
-        async with self._pool.acquire() as conn:
-            async with conn.cursor(aiomysql.SSCursor) as cur:
-                await cur.execute(
-                    """
+    async def get_groups(self, user_id: int, offset: int = 0, limit: Optional[int] = None, is_group: bool = True) -> AsyncGenerator[Tuple[int, str], None]:
+        base_sql = """
                     SELECT group_id, name
                     FROM FILE_GROUP
                     WHERE user_id = %s AND is_group = %s
                     ORDER BY created_at DESC
-                    """,
-                    (user_id, is_group)
-                )
-                while True:
-                    row = await cur.fetchone()
-                    if not row:
-                        break
+                    """
+        params = [user_id]
+
+        if limit is not None:
+            base_sql += " LIMIT %s OFFSET %s"
+            params.extend([limit, offset])
+
+        async with self._pool.acquire() as conn:
+            async with conn.cursor(aiomysql.SSCursor) as cur:
+                await cur.execute(base_sql, params)
+                async for row in cur:
                     group_id, name = row
-                    yield (group_id, name)
+                    yield int(group_id), str(name)
 
     async def get_group(self, group_id: int, user_id: int) -> Optional[GroupInfo]:
         async with self._pool.acquire() as conn:

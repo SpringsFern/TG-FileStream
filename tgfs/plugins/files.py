@@ -26,46 +26,23 @@ from tgfs.utils import check_get_user
 
 log = logging.getLogger(__name__)
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^\/myfiles", func=lambda x: x.is_private and not x.file))
+@client.on(events.NewMessage(incoming=True, pattern=r"^\/files", func=lambda x: x.is_private and not x.file))
 async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
     msg: Message = evt.message
     user = await check_get_user(msg.sender_id, msg.id)
     if user is None:
         return
     total_files = await DB.db.total_files(user.user_id)
-    if total_files == 0:
-        await evt.reply("You have not generated a link for any files yet.")
-        return
-    files_gen = DB.db.get_files(user.user_id)
-    files_btn: List[List[Button]] = []
-    async for file_id, file_name in files_gen:
-        files_btn.append([
-            Button.inline(file_name, data=f"fileinfo_{file_id}")
-        ])
-
+    total_groups = await DB.db.total_files(user.user_id, is_group=True)
     await evt.reply(
-        f"You have {total_files} files:",
-        buttons=files_btn
-    )
+        f"""You have created links for:
+• Files: {total_files}
+• Groups: {total_groups}
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^\/mygroups", func=lambda x: x.is_private and not x.file))
-async def handle_mygroups_command(evt: events.NewMessage.Event) -> None:
-    msg: Message = evt.message
-    user = await check_get_user(msg.sender_id, msg.id)
-    if user is None:
-        return
-    total_files = await DB.db.total_files(user.user_id, is_group=True)
-    if total_files == 0:
-        await evt.reply("You have not generated a link for any files yet.")
-        return
-    files_gen = DB.db.get_groups(user.user_id)
-    files_btn: List[List[Button]] = []
-    async for file_id, file_name in files_gen:
-        files_btn.append([
-            Button.inline(file_name, data=f"groupinfo_{file_id}")
-        ])
-
-    await evt.reply(
-        f"You have {total_files} groups:",
-        buttons=files_btn
+Select the type of links you want to view.
+""",
+        buttons=[
+            [Button.inline("Files", "fileinfo_page_0")],
+            [Button.inline("Groups", "groupinfo_page_0")]
+        ]
     )

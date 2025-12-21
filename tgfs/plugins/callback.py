@@ -39,28 +39,65 @@ async def handle_tos_button(evt: events.CallbackQuery.Event):
     await evt.answer("You have agreed to the Terms of Service.")
     await evt.edit(buttons=[[Button.inline("Agreed", b"tos_agreed")]])
 
-@client.on(events.CallbackQuery(pattern=r"^fileinfo$"))
-async def handle_filelist_button(evt: events.CallbackQuery.Event) -> None:
-    user_id = evt.sender_id
-    total_files = await DB.db.total_files(user_id)
-    if total_files == 0:
-        await evt.reply("You have not generated a link for any files yet.")
-        return
-    files_gen = DB.db.get_files(user_id)
-    files_btn: List[List[Button]] = []
-    async for file_id, file_name in files_gen:
-        files_btn.append([
-            Button.inline(file_name, data=f"fileinfo_{file_id}")
-        ])
+@client.on(events.CallbackQuery(pattern=r"^(fileinfo|groupinfo)_page_(\d+)$"))
+async def handle_list_page(evt: events.CallbackQuery.Event) -> None:
+    kind = evt.pattern_match.group(1).decode()
+    page_no = int(evt.pattern_match.group(2))
+    is_group = kind == "groupinfo"
 
-    await evt.edit(
-        f"You have {total_files} files:",
-        buttons=files_btn
+    user_id = evt.sender_id
+    label = "group" if is_group else "file"
+
+    total_items = await DB.db.total_files(user_id, is_group=True if is_group else None)
+    if total_items == 0:
+        await evt.edit(f"You have not generated any {label} links yet.")
+        return
+
+    limit = Config.FILE_INDEX_LIMIT
+    total_pages = (total_items + limit - 1) // limit
+
+    if page_no < 0 or page_no >= total_pages:
+        await evt.answer("Invalid page.", alert=True)
+        return
+
+    offset = page_no * limit
+    items_gen = (
+        DB.db.get_groups(user_id, offset, limit)
+        if is_group
+        else DB.db.get_files(user_id, offset, limit)
     )
 
-@client.on(events.CallbackQuery(pattern=r"^fileinfo_(\d+)$"))
+    buttons: list[list[Button]] = []
+
+    async for item_id, name in items_gen:
+        buttons.append([
+            Button.inline(name, data=f"{label}info_file_{item_id}_{page_no}")
+        ])
+
+    if not buttons:
+        await evt.edit(f"No {label}s on this page.")
+        return
+
+    nav = []
+    if page_no > 0:
+        nav.append(Button.inline("<<", f"{kind}_page_{page_no - 1}"))
+
+    nav.append(Button.inline(f"Page {page_no + 1}/{total_pages}", b"noop"))
+
+    if page_no + 1 < total_pages:
+        nav.append(Button.inline(">>", f"{kind}_page_{page_no + 1}"))
+
+    buttons.append(nav)
+
+    await evt.edit(
+        f"You have **{total_items}** {label}s:",
+        buttons=buttons
+    )
+
+@client.on(events.CallbackQuery(pattern=r"^fileinfo_file_(\d+)_(\d+)$"))
 async def handle_fileinfo_button(evt: events.CallbackQuery.Event):
     file_id = int(evt.pattern_match.group(1))
+    page_no = int(evt.pattern_match.group(2))
     user_id = evt.sender_id
     file_info = await DB.db.get_file(file_id, user_id)
     if file_info is None:
@@ -79,13 +116,14 @@ async def handle_fileinfo_button(evt: events.CallbackQuery.Event):
         f"Is Restricted: {'Yes' if file_info.is_deleted else 'No'}",
         buttons=[
             [Button.url(file_info.file_name, url)],
-            [Button.inline("Back", b"fileinfo")]
+            [Button.inline("Back", f"fileinfo_page_{page_no}")]
         ]
     )
 
-@client.on(events.CallbackQuery(pattern=r"^groupinfo_(\d+)$"))
+@client.on(events.CallbackQuery(pattern=r"^groupinfo_file_(\d+)_(\d+)$"))
 async def handle_groupinfo_button(evt: events.CallbackQuery.Event):
     file_id = int(evt.pattern_match.group(1))
+    page_no = int(evt.pattern_match.group(2))
     user_id = evt.sender_id
     file_info = await DB.db.get_group(file_id, user_id)
     if file_info is None:
@@ -95,8 +133,10 @@ async def handle_groupinfo_button(evt: events.CallbackQuery.Event):
     buttons: List[List[Button]] = [
         [Button.url("Open", f"{Config.PUBLIC_URL}/group/{token}")]
     ]
-    for file_id in file_info.files or []:
-        buttons.append([Button.inline(str(file_id), f"fileinfo_{file_id}")])
+    if file_info.files and len(file_info.files) <= 98:
+        for file_id in file_info.files:
+            buttons.append([Button.inline(str(file_id), f"fileinfo_file_{file_id}_0")])
+    buttons.append([Button.inline("Back", f"groupinfo_page_{page_no}")])
     await evt.edit(
         f"Group Info:\n"
         f"Name: {file_info.name}\n"
