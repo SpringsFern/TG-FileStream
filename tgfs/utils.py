@@ -33,6 +33,7 @@ from tgfs.database import DB
 async def update_location(source: FileSource, transfer: ParallelTransferrer) -> InputTypeLocation:
     message = cast(Message, await client.forward_messages(Config.BIN_CHANNEL, source.message_id, source.chat_id, drop_author=True))
     msg = cast(Message, await transfer.client.get_messages(message.chat_id, ids=message.id))
+    await message.delete()
     _, location = get_input_location(msg)
     await DB.db.upsert_location(transfer.client_id, location)
     return location

@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from typing import List
 
 from telethon import events, Button
 from telethon.custom import Message
@@ -33,7 +32,7 @@ async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
     if user is None:
         return
     total_files = await DB.db.total_files(user.user_id)
-    total_groups = await DB.db.total_files(user.user_id, is_group=True)
+    total_groups = await DB.db.total_groups(user.user_id)
     await evt.reply(
         f"""You have created links for:
 • Files: {total_files}

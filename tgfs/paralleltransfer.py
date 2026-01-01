@@ -26,7 +26,7 @@ import math
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import AsyncGenerator, Dict, Optional, List
+from typing import AsyncGenerator, Optional
 
 from telethon import TelegramClient
 from telethon.crypto import AuthKey
@@ -63,7 +63,7 @@ class DCConnectionManager:
     dc_id: int
     dc: Optional[DcOption]
     auth_key: Optional[AuthKey]
-    connections: List[Connection]
+    connections: list[Connection]
 
     _list_lock: asyncio.Lock
 
@@ -149,7 +149,7 @@ class ParallelTransferrer:
     log: logging.Logger
     client: TelegramClient
     client_id: int
-    dc_managers: Dict[int, DCConnectionManager]
+    dc_managers: dict[int, DCConnectionManager]
     users: int
 
     def __init__(self, client: TelegramClient, client_id: int) -> None:

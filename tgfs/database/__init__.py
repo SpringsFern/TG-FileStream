@@ -16,10 +16,11 @@
 
 from typing import Optional
 from tgfs.config import Config
+from tgfs.database.database import BaseStorage
 from tgfs.database.mysql import MySQLDB
 
 class DB:
-    db: Optional[MySQLDB] = MySQLDB()
+    db: Optional[BaseStorage] = MySQLDB()
 
     @classmethod
     async def init(cls):

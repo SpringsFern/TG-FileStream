@@ -16,7 +16,7 @@
 
 import datetime
 import logging
-from typing import List, Optional
+from typing import Optional
 
 from telethon import events, Button
 from telethon.custom import Message

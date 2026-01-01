@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from os import environ
-from typing import List
 
 try:
     from dotenv import load_dotenv
@@ -23,7 +22,7 @@ try:
 except ImportError:
     print("Warning: python-dotenv not installed. Skipping .env loading.")
 
-def get_multi_client_tokens() -> List[int]:
+def get_multi_client_tokens() -> list[int]:
     prefix = "MULTI_TOKEN"
     tokens = []
     for key in environ:
@@ -48,7 +47,7 @@ class Config:
     DEBUG: bool = bool(environ.get("DEBUG", None))
     EXT_DEBUG: bool = bool(environ.get("EXT_DEBUG", None))
     CONNECTION_LIMIT: int = int(environ.get("CONNECTION_LIMIT", 20))
-    TOKENS: List[str] = get_multi_client_tokens()
+    TOKENS: list[str] = get_multi_client_tokens()
     CACHE_SIZE: int = int(environ.get("CACHE_SIZE", 128))
     DOWNLOAD_PART_SIZE: int = int(environ.get("DOWNLOAD_PART_SIZE", 1024 * 1024))
     NO_UPDATE: bool = bool(environ.get("NO_UPDATE", False))

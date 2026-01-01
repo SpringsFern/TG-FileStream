@@ -17,17 +17,19 @@
 # from abc import ABC, abstractmethod
 import aiomysql
 
+from tgfs.database.database import BaseStorage
+
 from .file import FileDB
 from .user import UserDB
 from .group import GroupDB
 from .utils import UtilDB
 
-class MySQLDB(FileDB, GroupDB, UserDB, UtilDB):
+class MySQLDB(BaseStorage, FileDB, GroupDB, UserDB, UtilDB):
     _pool: aiomysql.Pool
 
     async def connect(self, *, host: str, port: int = 3306, user: str, password: str,
                           db: str, minsize: int = 1, maxsize: int = 10, autocommit: bool = False,
-                          connect_timeout: int = 10) -> "MySQLDB":
+                          connect_timeout: int = 10) -> None:
         self._pool = await aiomysql.create_pool(
             host=host, port=port, user=user, password=password, db=db,
             minsize=minsize, maxsize=maxsize, autocommit=autocommit,

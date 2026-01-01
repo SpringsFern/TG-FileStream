@@ -17,11 +17,11 @@
 import os
 
 import json
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 SUPPORTED_TYPE = Union[bytes, bool, int, str, list, dict]
 
-def encode_value(value: SUPPORTED_TYPE) -> Tuple[bytes, str]:
+def encode_value(value: SUPPORTED_TYPE) -> tuple[bytes, str]:
     if isinstance(value, bytes):
         return value, "bytes"
 

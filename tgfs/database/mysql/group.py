@@ -16,23 +16,23 @@
 
 import asyncio
 import aiomysql
-from typing import AsyncGenerator, Tuple, Optional
+from typing import AsyncGenerator, Optional
 
 from tgfs.types import GroupInfo
 
 class GroupDB:
     _list_lock = asyncio.Lock()
 
-    async def create_group(self, user_id: int, name: str, is_group: bool = True) -> int:
+    async def create_group(self, user_id: int, name: str) -> int:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 try:
                     await cur.execute(
                         """
-                        INSERT INTO FILE_GROUP (user_id, name, is_group)
-                        VALUES (%s, %s, %s)
+                        INSERT INTO FILE_GROUP (user_id, name)
+                        VALUES (%s, %s)
                         """,
-                        (user_id, name, is_group)
+                        (user_id, name)
                     )
                     group_id = cur.lastrowid
                     await conn.commit()
@@ -41,7 +41,7 @@ class GroupDB:
                     await conn.rollback()
                     raise
 
-    async def link_file_group(self, group_id: int, file_id: int, order: Optional[int] = None) -> None:
+    async def link_file_group(self, group_id: int, user_id: int, file_id: int, order: Optional[int] = None) -> None:
         async with self._list_lock:
             async with self._pool.acquire() as conn:
                 async with conn.cursor() as cur:
@@ -61,12 +61,12 @@ class GroupDB:
 
                         await cur.execute(
                             """
-                            INSERT INTO FILE_GROUP_FILE (group_id, id, order_index)
-                            VALUES (%s, %s, %s)
+                            INSERT INTO FILE_GROUP_FILE (group_id, user_id, id, order_index)
+                            VALUES (%s, %s, %s, %s)
                             ON DUPLICATE KEY UPDATE
                               order_index = VALUES(order_index)
                             """,
-                            (group_id, file_id, order)
+                            (group_id, user_id, file_id, order)
                         )
 
                         await conn.commit()
@@ -74,11 +74,11 @@ class GroupDB:
                         await conn.rollback()
                         raise
 
-    async def get_groups(self, user_id: int, offset: int = 0, limit: Optional[int] = None, is_group: bool = True) -> AsyncGenerator[Tuple[int, str], None]:
+    async def get_groups(self, user_id: int, offset: int = 0, limit: Optional[int] = None) -> AsyncGenerator[tuple[int, str], None]:
         base_sql = """
                     SELECT group_id, name
                     FROM FILE_GROUP
-                    WHERE user_id = %s AND is_group = %s
+                    WHERE user_id = %s
                     ORDER BY created_at DESC
                     """
         params = [user_id]
@@ -99,7 +99,7 @@ class GroupDB:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
                     """
-                    SELECT group_id, user_id, name, is_group, created_at
+                    SELECT group_id, user_id, name, created_at
                     FROM FILE_GROUP
                     WHERE group_id = %s AND user_id = %s
                     LIMIT 1
@@ -114,7 +114,6 @@ class GroupDB:
                     group_id=int(row["group_id"]),
                     user_id=int(row["user_id"]),
                     name=row["name"],
-                    is_group=bool(row["is_group"]),
                     created_at=row.get("created_at"),
                     files=[]
                 )
@@ -188,3 +187,17 @@ class GroupDB:
                 except Exception:
                     await conn.rollback()
                     raise
+    async def total_groups(self, user_id: int) -> int:
+        async with self._pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM FILE_GROUP
+                    WHERE user_id = %s
+                    """,
+                    (user_id)
+                )
+
+                row = await cur.fetchone()
+                return int(row[0]) if row else 0

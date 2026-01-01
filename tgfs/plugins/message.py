@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from typing import Tuple, cast
+from typing import cast
 
 from telethon import events
 from telethon.custom import Message
@@ -53,7 +53,7 @@ async def handle_file_message(evt: events.NewMessage.Event, msg=None) -> None:
         return
     if user.curt_op in [Status.GROUP_NAME, Status.GROUP]:
         return
-    dc_id, location = cast(Tuple[int, InputTypeLocation], get_input_location(msg.media))
+    dc_id, location = cast(tuple[int, InputTypeLocation], get_input_location(msg.media))
     file_info = FileInfo(
         id=location.id,
         dc_id=dc_id,
@@ -92,7 +92,7 @@ async def handle_group_command(evt: events.NewMessage.Event) -> None:
         await evt.reply("You are already in an operation. Please complete it before starting a new one.")
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^/done", func=lambda x: x.is_private and not x.file))
-async def handle_done_command(evt: events.NewMessage.Event, user = None, is_group = True) -> None:
+async def handle_done_command(evt: events.NewMessage.Event, user = None) -> None:
     msg: Message = evt.message
     user = user or await check_get_user(msg.sender_id, msg.id)
     if user is None:
@@ -103,15 +103,15 @@ async def handle_done_command(evt: events.NewMessage.Event, user = None, is_grou
         min_id = user.op_id+1
         max_id = msg.id
         order=0
-        group_id = await DB.db.create_group(user.user_id, msg.id, is_group)
-        file_msgs = await client.get_messages(
+        group_id = await DB.db.create_group(user.user_id, msg.id)
+        file_msgs: list[Message] = await client.get_messages(
             entity=msg.chat_id,
             ids=range(min_id, max_id),
         )
         for file_msg in file_msgs:
             if not file_msg.file:
                 continue
-            dc_id, location = cast(Tuple[int, InputTypeLocation], get_input_location(file_msg.media))
+            dc_id, location = cast(tuple[int, InputTypeLocation], get_input_location(file_msg.media))
             file_info = FileInfo(
                 id=location.id,
                 dc_id=dc_id,
@@ -126,8 +126,9 @@ async def handle_done_command(evt: events.NewMessage.Event, user = None, is_grou
                 multi_clients[0].client_id,
                 location
             )
+            await DB.db.link_user_file(file_info.id,file_msg.sender_id, file_msg.id, file_msg.chat_id)
             order+=1
-            await DB.db.link_file_group(group_id, file_info.id, order)
+            await DB.db.link_file_group(group_id, user.user_id, file_info.id, order)
         if order == 0:
             await DB.db.delete_group(group_id, user.user_id)
             await evt.reply("No files were added to the group. Operation cancelled.")

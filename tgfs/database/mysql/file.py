@@ -14,18 +14,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import asyncio
-import datetime
 import aiomysql
-from typing import AsyncGenerator, Set, Tuple, Optional
+from typing import AsyncGenerator, Optional
 
 from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
 
 from tgfs.types import FileSource, FileInfo, InputTypeLocation
 
 class FileDB:
-    _list_lock = asyncio.Lock()
-
     async def add_file(self, file: FileInfo) -> None:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -75,7 +71,7 @@ class FileDB:
                     await conn.rollback()
                     raise
 
-    async def get_file(self, file_id: int, user_id: int = None) -> Optional[FileInfo]:
+    async def get_file(self, file_id: int, user_id: Optional[int] = None) -> Optional[FileInfo]:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 if user_id is None:
@@ -90,6 +86,7 @@ class FileDB:
                                f.is_deleted
                         FROM TGFILE f
                         WHERE f.id = %s
+                        LIMIT 1
                         """,
                         (file_id, )
                     )
@@ -105,25 +102,15 @@ class FileDB:
                                f.is_deleted
                         FROM TGFILE f
                         WHERE f.id = %s
-                          AND (
-                                EXISTS (
-                                    SELECT 1
-                                    FROM USER_FILE uf
-                                    WHERE uf.id = f.id
-                                      AND uf.user_id = %s
-                                )
-                                OR
-                                EXISTS (
-                                    SELECT 1
-                                    FROM FILE_GROUP_FILE gff
-                                    JOIN FILE_GROUP fg ON fg.group_id = gff.group_id
-                                    WHERE gff.id = f.id
-                                      AND fg.user_id = %s
-                                )
-                              )
+                        AND EXISTS (
+                            SELECT 1
+                            FROM USER_FILE uf
+                            WHERE uf.id = f.id
+                              AND uf.user_id = %s
+                        )
                         LIMIT 1
                         """,
-                        (file_id, user_id, user_id)
+                        (file_id, user_id)
                     )
     
                 row = await cur.fetchone()
@@ -206,7 +193,7 @@ class FileDB:
                     raise
 
     async def get_files(self, user_id: int, offset: int = 0, limit: Optional[int] = None
-    ) -> AsyncGenerator[Tuple[int, str], None]:
+    ) -> AsyncGenerator[tuple[int, str], None]:
 
         base_sql = """
             SELECT f.id AS file_id, f.file_name
@@ -230,7 +217,7 @@ class FileDB:
                     file_id, file_name = row
                     yield int(file_id), str(file_name)
 
-    async def get_file_users(self, file_id: int, ) -> Set[int]:
+    async def get_file_users(self, file_id: int, ) -> set[int]:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
@@ -245,58 +232,32 @@ class FileDB:
                 rows = await cur.fetchall()
                 return {col[0] for col in rows}
 
-    async def total_files(self, user_id: int, is_group: Optional[bool] = None) -> int:
+    async def total_files(self, user_id: int) -> int:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
-                if is_group is None:
-                    await cur.execute(
-                        """
-                        SELECT COUNT(*)
-                        FROM USER_FILE
-                        WHERE user_id = %s
-                        """,
-                        (user_id,)
-                    )
-                else:
-                    await cur.execute(
-                        """
-                        SELECT COUNT(*)
-                        FROM FILE_GROUP
-                        WHERE user_id = %s AND is_group = %s
-                        """,
-                        (user_id, is_group)
-                    )
+                await cur.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM USER_FILE
+                    WHERE user_id = %s
+                    """,
+                    (user_id,)
+                )
 
                 row = await cur.fetchone()
                 return int(row[0]) if row else 0
 
-    async def delete_file(self, file_id: int, user_id: int = None) -> bool:
+    async def delete_file(self, file_id: int, user_id: int = Optional[None]) -> bool:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 try:
                     await cur.execute(
                         """
-                        DELETE FROM TGFILE f
-                        WHERE f.id = %s
-                          AND (
-                                EXISTS (
-                                    SELECT 1
-                                    FROM USER_FILE uf
-                                    WHERE uf.id = f.id
-                                      AND uf.user_id = %s
-                                )
-                                OR
-                                EXISTS (
-                                    SELECT 1
-                                    FROM FILE_GROUP_FILE gff
-                                    JOIN FILE_GROUP fg ON fg.group_id = gff.group_id
-                                    WHERE gff.id = f.id
-                                      AND fg.user_id = %s
-                                )
-                              )
+                        DELETE FROM USER_FILE
+                        WHERE id = %s AND user_id = %s
                         LIMIT 1
                         """,
-                        (file_id, user_id, user_id)
+                        (file_id, user_id)
                     )
                     deleted = bool(cur.rowcount > 0)
                     await conn.commit()

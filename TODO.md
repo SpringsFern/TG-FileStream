@@ -3,10 +3,10 @@
 | Task                                                                                     | Status      |
 |------------------------------------------------------------------------------------------|-------------|
 | Rewrite the entire project based on the Telethon client                                  | ✅ Done     |
-| Reuse code from `tgfilestream` (`paralleltransfer.py`) to fetch files from Telegram     | ✅ Done     |
-| Use multiple Telegram Bot accounts to avoid flood wait                                   | Not for Now     |
+| Reuse code from `tgfilestream` (`paralleltransfer.py`) to fetch files from Telegram      | ✅ Done     |
+| Use multiple Telegram Bot accounts to avoid flood wait                                   | ✅ Done     |
 | Add support for multiple databases                                                       | ⏳ Pending  |
-| Share File Info Cache between multiple clients                                           | Not Planned  |
+| Share File Info Cache between multiple clients                                           | Not Planned |
 | Prefetch chunks                                                                          | Not Planned |
 | Cache Files                                                                              | Not Planned |
 

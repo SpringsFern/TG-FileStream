@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
-from typing import List, Optional, Union, Any, Dict
+from typing import Optional, Union, Any
 from dataclasses import dataclass
 from enum import Enum
 
@@ -69,7 +69,7 @@ class User:
         return self.user_id in Config.ADMIN_IDS
 
     @classmethod
-    def from_row(cls, row: Dict[str, Any]) -> "User":
+    def from_row(cls, row: dict[str, Any]) -> "User":
 
         def parse_dt(val):
             if isinstance(val, datetime.datetime):
@@ -97,6 +97,5 @@ class GroupInfo:
     group_id: int
     user_id: int
     name: str
-    is_group: bool
     created_at: Optional[datetime.datetime]
-    files: Optional[List[int]] = None
+    files: Optional[list[int]] = None

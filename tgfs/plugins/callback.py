@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from typing import List
 
 from telethon import Button, events
 
@@ -48,7 +47,8 @@ async def handle_list_page(evt: events.CallbackQuery.Event) -> None:
     user_id = evt.sender_id
     label = "group" if is_group else "file"
 
-    total_items = await DB.db.total_files(user_id, is_group=True if is_group else None)
+    total_items = (await DB.db.total_groups(user_id)
+        if is_group else await DB.db.total_files(user_id))
     if total_items == 0:
         await evt.edit(f"You have not generated any {label} links yet.")
         return
@@ -130,7 +130,7 @@ async def handle_groupinfo_button(evt: events.CallbackQuery.Event):
         await evt.answer("Group not found.")
         return
     token = make_token(user_id, file_info.group_id)
-    buttons: List[List[Button]] = [
+    buttons: list[list[Button]] = [
         [Button.url("Open", f"{Config.PUBLIC_URL}/group/{token}")]
     ]
     if file_info.files and len(file_info.files) <= 98:
