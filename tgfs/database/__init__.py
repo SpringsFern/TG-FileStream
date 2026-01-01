@@ -33,6 +33,7 @@ class DB:
             minsize=1,
             maxsize=5
         )
+        await cls.db.init_db()
 
     @classmethod
     async def close(cls):

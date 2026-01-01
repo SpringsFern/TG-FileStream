@@ -24,6 +24,25 @@ from .user import UserDB
 from .group import GroupDB
 from .utils import UtilDB
 
+from pathlib import Path
+
+def read_sql_file(path: str) -> list[str]:
+    sql = Path(path).read_text(encoding="utf-8")
+    statements = []
+    buffer = []
+
+    for line in sql.splitlines():
+        line = line.strip()
+        if not line or line.startswith("--"):
+            continue
+
+        buffer.append(line)
+        if line.endswith(";"):
+            statements.append(" ".join(buffer))
+            buffer.clear()
+
+    return statements
+
 class MySQLDB(BaseStorage, FileDB, GroupDB, UserDB, UtilDB):
     _pool: aiomysql.Pool
 
@@ -40,9 +59,11 @@ class MySQLDB(BaseStorage, FileDB, GroupDB, UserDB, UtilDB):
         self._pool.close()
         await self._pool.wait_closed()
 
-    # async def init_db(self) -> None:
-    #     """Create tables if they don't exist."""
-    #     async with self._pool.acquire() as conn:
-    #         async with conn.cursor() as cur:
-    #             await cur.execute(CREATE_USERS_TABLE_SQL)
-    #             await conn.commit()
+    async def init_db(self) -> None:
+        statements = read_sql_file("schema.sql")
+    
+        async with self._pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                for stmt in statements:
+                    await cur.execute(stmt)
+                await conn.commit()
