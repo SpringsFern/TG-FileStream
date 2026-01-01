@@ -17,9 +17,10 @@
 import os
 
 import json
-from typing import Optional, Union
+from typing import Optional
 
-SUPPORTED_TYPE = Union[bytes, bool, int, str, list, dict]
+from tgfs.database.database import BaseStorage
+from tgfs.types import SUPPORTED_TYPE
 
 def encode_value(value: SUPPORTED_TYPE) -> tuple[bytes, str]:
     if isinstance(value, bytes):
@@ -59,7 +60,7 @@ def decode_value(data: bytes, vtype: str) -> SUPPORTED_TYPE:
     raise ValueError(f"Unknown type: {vtype}")
 
 
-class UtilDB:
+class UtilDB(BaseStorage):
     async def get_secret(self, rotate=False) -> bytes:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:

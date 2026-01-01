@@ -17,8 +17,6 @@
 # from abc import ABC, abstractmethod
 import aiomysql
 
-from tgfs.database.database import BaseStorage
-
 from .file import FileDB
 from .user import UserDB
 from .group import GroupDB
@@ -43,7 +41,7 @@ def read_sql_file(path: str) -> list[str]:
 
     return statements
 
-class MySQLDB(BaseStorage, FileDB, GroupDB, UserDB, UtilDB):
+class MySQLDB(FileDB, GroupDB, UserDB, UtilDB):
     _pool: aiomysql.Pool
 
     async def connect(self, *, host: str, port: int = 3306, user: str, password: str,
@@ -60,8 +58,8 @@ class MySQLDB(BaseStorage, FileDB, GroupDB, UserDB, UtilDB):
         await self._pool.wait_closed()
 
     async def init_db(self) -> None:
-        statements = read_sql_file("schema.sql")
-    
+        statements = read_sql_file("tgfs/database/mysql/schema.sql")
+
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 for stmt in statements:

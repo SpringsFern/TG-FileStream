@@ -25,6 +25,7 @@ from tgfs.config import Config
 
 InputTypeLocation = Union[types.InputDocumentFileLocation, types.InputPhotoFileLocation]
 InputMedia = Union[types.Document, types.Photo, types.PhotoEmpty, types.DocumentEmpty]
+SUPPORTED_TYPE = Union[bytes, bool, int, str, list, dict]
 
 class Status(Enum):
     NO_OP=0

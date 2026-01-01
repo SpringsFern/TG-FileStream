@@ -17,8 +17,7 @@
 from abc import ABC, abstractmethod
 from typing import AsyncGenerator, Optional
 
-from tgfs.database.mysql.utils import SUPPORTED_TYPE
-from tgfs.types import FileInfo, FileSource, GroupInfo, InputTypeLocation, User
+from tgfs.types import SUPPORTED_TYPE, FileInfo, FileSource, GroupInfo, InputTypeLocation, User
 
 
 class BaseStorage(ABC):

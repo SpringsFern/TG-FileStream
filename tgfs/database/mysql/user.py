@@ -17,9 +17,10 @@
 import aiomysql
 from typing import AsyncGenerator, Optional
 
+from tgfs.database.database import BaseStorage
 from tgfs.types import User
 
-class UserDB:
+class UserDB(BaseStorage):
     async def get_user(self, user_id: int) -> Optional[User]:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:

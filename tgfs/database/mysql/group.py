@@ -18,9 +18,10 @@ import asyncio
 import aiomysql
 from typing import AsyncGenerator, Optional
 
+from tgfs.database.database import BaseStorage
 from tgfs.types import GroupInfo
 
-class GroupDB:
+class GroupDB(BaseStorage):
     _list_lock = asyncio.Lock()
 
     async def create_group(self, user_id: int, name: str) -> int:

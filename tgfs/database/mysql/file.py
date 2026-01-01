@@ -19,9 +19,10 @@ from typing import AsyncGenerator, Optional
 
 from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
 
+from tgfs.database.database import BaseStorage
 from tgfs.types import FileSource, FileInfo, InputTypeLocation
 
-class FileDB:
+class FileDB(BaseStorage):
     async def add_file(self, file: FileInfo) -> None:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
