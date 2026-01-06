@@ -54,6 +54,7 @@ class Config:
     TOS: str = ""
     ADMIN_IDS = {int(x) for x in environ.get("ADMIN_IDS", "").split(",") if x}
 
+    DB_BACKEND: str = environ.get("DB_BACKEND", "mysql")
     DB_HOST: str = environ["DB_HOST"]
     DB_USER: str = environ["DB_USER"]
     DB_PASS: str = environ["DB_PASS"]

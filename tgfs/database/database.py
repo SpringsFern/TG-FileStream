@@ -52,11 +52,11 @@ class BaseStorage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def add_file(self, file: FileInfo) -> None:
+    async def add_file(self, user_id: int, file: FileInfo, source: FileSource) -> None:
         raise NotImplementedError
-
+    
     @abstractmethod
-    async def link_user_file(self, file_id: int, user_id: int, msg_id: int, chat_id: Optional[int]) -> None:
+    async def update_file_restriction(self, file_id: int, status: bool) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -89,7 +89,11 @@ class BaseStorage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_file(self, file_id: int, user_id: Optional[int] = None) -> bool:
+    async def delete_file(self, file_id: int) -> bool:
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def remove_file(self, file_id: int, user_id: int) -> bool:
         raise NotImplementedError
 
     @abstractmethod
@@ -97,7 +101,7 @@ class BaseStorage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def link_file_group(self, group_id: int, user_id: int, file_id: int, order: Optional[int] = None) -> None:
+    async def add_file_to_group(self, group_id: int, user_id: int, file_id: int, order: Optional[int] = None) -> None:
         raise NotImplementedError
 
     @abstractmethod

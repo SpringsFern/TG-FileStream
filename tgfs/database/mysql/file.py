@@ -23,7 +23,7 @@ from tgfs.database.database import BaseStorage
 from tgfs.types import FileSource, FileInfo, InputTypeLocation
 
 class FileDB(BaseStorage):
-    async def add_file(self, file: FileInfo) -> None:
+    async def add_file(self, user_id: int, file: FileInfo, source: FileSource) -> None:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 try:
@@ -45,28 +45,31 @@ class FileDB(BaseStorage):
                             file.is_deleted
                         )
                     )
+                    await cur.execute(
+                        """
+                        INSERT INTO USER_FILE (user_id, id, source_chat_id, source_msg_id)
+                        VALUES (%s, %s, %s, %s)
+                        ON DUPLICATE KEY UPDATE
+                          source_chat_id = COALESCE(VALUES(source_chat_id), source_chat_id),
+                          source_msg_id = COALESCE(VALUES(source_msg_id), source_msg_id)
+                        """,
+                        (user_id, file.id, source.chat_id, source.message_id)
+                    )
                     await conn.commit()
                 except Exception:
                     await conn.rollback()
                     raise
 
-    async def link_user_file(self, file_id: int, user_id: int, msg_id: int, chat_id: Optional[int]) -> None:
-        chat_id = chat_id or user_id
+    async def update_file_restriction(self, file_id: int, status: bool) -> None:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 try:
-                    if user_id is not None:
-                        await cur.execute(
-                            """
-                            INSERT INTO USER_FILE (user_id, id, source_chat_id, source_msg_id)
-                            VALUES (%s, %s, %s, %s)
-                            ON DUPLICATE KEY UPDATE
-                              source_chat_id = COALESCE(VALUES(source_chat_id), source_chat_id),
-                              source_msg_id = COALESCE(VALUES(source_msg_id), source_msg_id)
-                            """,
-                            (user_id, file_id, chat_id, msg_id)
-                        )
-
+                    await cur.execute(
+                        """
+                        UPDATE TGFILE SET is_deleted = %s WHERE id = %s
+                        """,
+                        (status, file_id)
+                    )
                     await conn.commit()
                 except Exception:
                     await conn.rollback()
@@ -248,7 +251,26 @@ class FileDB(BaseStorage):
                 row = await cur.fetchone()
                 return int(row[0]) if row else 0
 
-    async def delete_file(self, file_id: int, user_id: int = Optional[None]) -> bool:
+    async def delete_file(self, file_id: int) -> bool:
+        async with self._pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                try:
+                    await cur.execute(
+                        """
+                        DELETE FROM TGFILE
+                        WHERE id = %s
+                        LIMIT 1
+                        """,
+                        (file_id)
+                    )
+                    deleted = bool(cur.rowcount > 0)
+                    await conn.commit()
+                    return deleted
+                except Exception:
+                    await conn.rollback()
+                    raise
+
+    async def remove_file(self, file_id: int, user_id: int) -> bool:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 try:

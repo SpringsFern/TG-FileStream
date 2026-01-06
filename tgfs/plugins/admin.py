@@ -130,7 +130,7 @@ async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
     if not file:
         return await evt.reply("File not found in Database")
     file.is_deleted = True
-    await DB.db.add_file(file)
+    await DB.db.update_file_restriction(file.id, file.is_deleted)
     await evt.reply(f"Restricted File with File Id {file.id}")
     
 

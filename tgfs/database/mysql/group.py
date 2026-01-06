@@ -42,7 +42,7 @@ class GroupDB(BaseStorage):
                     await conn.rollback()
                     raise
 
-    async def link_file_group(self, group_id: int, user_id: int, file_id: int, order: Optional[int] = None) -> None:
+    async def add_file_to_group(self, group_id: int, user_id: int, file_id: int, order: Optional[int] = None) -> None:
         async with self._list_lock:
             async with self._pool.acquire() as conn:
                 async with conn.cursor() as cur:

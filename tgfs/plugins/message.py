@@ -24,7 +24,7 @@ from telethon.utils import get_input_location
 from tgfs.config import Config
 from tgfs.telegram import client, multi_clients
 from tgfs.database import DB
-from tgfs.types import FileInfo, InputTypeLocation, Status
+from tgfs.types import FileInfo, FileSource, InputTypeLocation, Status
 from tgfs.utils import check_get_user, make_token
 
 log = logging.getLogger(__name__)
@@ -63,13 +63,14 @@ async def handle_file_message(evt: events.NewMessage.Event, msg=None) -> None:
         thumb_size=location.thumb_size,
         is_deleted=False
     )
-    await DB.db.add_file(file_info)
+    file_source = FileSource(
+        chat_id=msg.chat_id,
+        message_id=msg.id,
+    )
+    await DB.db.add_file(msg.sender_id, file_info, file_source)
     await DB.db.upsert_location(
         multi_clients[0].client_id,
         location
-    )
-    await DB.db.link_user_file(
-        file_info.id,msg.sender_id, msg.id, msg.chat_id
     )
     # fwd_msg: Message = await msg.forward_to(Config.BIN_CHANNEL)
     token = make_token(msg.sender_id, file_info.id)
@@ -121,14 +122,17 @@ async def handle_done_command(evt: events.NewMessage.Event, user = None) -> None
                 thumb_size=location.thumb_size,
                 is_deleted=False
             )
-            await DB.db.add_file(file_info)
+            file_source = FileSource(
+                chat_id=file_msg.chat_id,
+                message_id=file_msg.id
+            )
+            await DB.db.add_file(user.id, file_info, file_source)
             await DB.db.upsert_location(
                 multi_clients[0].client_id,
                 location
             )
-            await DB.db.link_user_file(file_info.id,file_msg.sender_id, file_msg.id, file_msg.chat_id)
             order+=1
-            await DB.db.link_file_group(group_id, user.user_id, file_info.id, order)
+            await DB.db.add_file_to_group(group_id, user.user_id, file_info.id, order)
         if order == 0:
             await DB.db.delete_group(group_id, user.user_id)
             await evt.reply("No files were added to the group. Operation cancelled.")
