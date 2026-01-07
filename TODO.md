@@ -10,6 +10,7 @@
 | Prefetch chunks                                                                          | Not Planned |
 | Cache Files                                                                              | Not Planned |
 | Add More options in /files command                                                       | ⏳ Pending  |
+| Support for multiple languages                                                           | ⏳ Pending  |
 
 ---
 

@@ -20,11 +20,16 @@ The original Python version became inactive after EverythingSuckz rewrote the pr
 
 ---
 
+## 📝 Notes
+
+- If you want one without database checkout [DeekshithSH/tgfilestream](https://github.com/DeekshithSH/tgfilestream) or [simple branch](https://github.com/SpringsFern/TG-FileStream/tree/simple)
+
+---
+
 ## 🚀 Features
 
-- Download Telegram media via HTTP links  
-- Fast, concurrent chunked downloading  
-- Minimal setup, no database required
+- Download Telegram media via HTTP links
+- Fast, concurrent chunked downloading
 
 ---
 
@@ -127,10 +132,6 @@ python3 -m tgfs
 Once the server is running, you can:
 
 - Access Telegram media files via HTTP:
-
-```
-http://{PUBLIC_URL}/{message_id}/{filename}
-```
 
 - Or simply send a file to your bot, and it will respond with a download link.
 
