@@ -31,23 +31,9 @@ class MongoDB(FileDB, GroupDB, UserDB, UtilDB, BaseStorage):
     users: AsyncIOMotorCollection
     config: AsyncIOMotorCollection
 
-    async def connect(
-        self,
-        *,
-        host: str,
-        port: int = 27017,
-        user: str | None = None,
-        password: str | None = None,
-        db: str,
-        **_
-    ) -> None:
-        if user and password:
-            uri = f"mongodb://{user}:{password}@{host}:{port}"
-        else:
-            uri = f"mongodb://{host}:{port}"
-
+    async def connect(self, uri: str, dbname) -> None:
         self.client = AsyncIOMotorClient(uri)
-        self.db = self.client[db]
+        self.db = self.client[dbname]
 
         self.files  = self.db.files
         self.groups = self.db.groups

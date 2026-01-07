@@ -67,7 +67,7 @@ async def handle_file_message(evt: events.NewMessage.Event, msg=None) -> None:
         chat_id=msg.chat_id,
         message_id=msg.id,
     )
-    await DB.db.add_file(msg.sender_id, file_info, file_source)
+    await DB.db.add_file(user.user_id, file_info, file_source)
     await DB.db.upsert_location(
         multi_clients[0].client_id,
         location
@@ -104,7 +104,7 @@ async def handle_done_command(evt: events.NewMessage.Event, user = None) -> None
         min_id = user.op_id+1
         max_id = msg.id
         order=0
-        group_id = await DB.db.create_group(user.user_id, msg.id)
+        await DB.db.create_group(msg.id, user.user_id, msg.id)
         file_msgs: list[Message] = await client.get_messages(
             entity=msg.chat_id,
             ids=range(min_id, max_id),
@@ -126,15 +126,15 @@ async def handle_done_command(evt: events.NewMessage.Event, user = None) -> None
                 chat_id=file_msg.chat_id,
                 message_id=file_msg.id
             )
-            await DB.db.add_file(user.id, file_info, file_source)
+            await DB.db.add_file(user.user_id, file_info, file_source)
             await DB.db.upsert_location(
                 multi_clients[0].client_id,
                 location
             )
             order+=1
-            await DB.db.add_file_to_group(group_id, user.user_id, file_info.id, order)
+            await DB.db.add_file_to_group(msg.id, user.user_id, file_info.id, order)
         if order == 0:
-            await DB.db.delete_group(group_id, user.user_id)
+            await DB.db.delete_group(msg.id, user.user_id)
             await evt.reply("No files were added to the group. Operation cancelled.")
             user.curt_op = Status.NO_OP
             user.op_id = 0
@@ -142,7 +142,7 @@ async def handle_done_command(evt: events.NewMessage.Event, user = None) -> None
             return
         await evt.reply("Send a name for your group of files")
         user.curt_op = Status.GROUP_NAME
-        user.op_id = group_id
+        user.op_id = msg.id
         await DB.db.upsert_user(user)
     else:
         await evt.reply("Unknown operation state.")

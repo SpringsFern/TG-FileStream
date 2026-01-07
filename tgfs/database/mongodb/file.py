@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import datetime, timezone
-from time import timezone
 from typing import AsyncGenerator, Optional
 
 from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
@@ -35,15 +34,12 @@ class FileDB(BaseStorage):
                     "file_name": file.file_name,
                     "thumb_size": file.thumb_size,
                     "is_deleted": file.is_deleted,
-                },
-                "$addToSet": {
-                    "users": {
-                        "user_id": user_id,
+                    f"users.{user_id}": {
                         "chat_id": source.chat_id,
                         "message_id": source.message_id,
                         "added_at": datetime.now(timezone.utc),
-                    }
-                },
+                    },
+                }
             },
             upsert=True,
         )
@@ -57,7 +53,7 @@ class FileDB(BaseStorage):
     async def get_file(self, file_id: int, user_id: Optional[int] = None) -> Optional[FileInfo]:
         query = {"_id": file_id}
         if user_id is not None:
-            query["users.user_id"] = user_id
+            query[f"users.{user_id}"] = {"$exists": True}
     
         doc = await self.files.find_one(query)
         if not doc:
@@ -92,27 +88,39 @@ class FileDB(BaseStorage):
     
     async def get_source(self, file_id: int, user_id: int) -> Optional[FileSource]:
         doc = await self.files.find_one(
-            {"_id": file_id, "users.user_id": user_id},
-            {"users.$": 1},
+            {"_id": file_id, f"users.{user_id}": {"$exists": True}},
+            {f"users.{user_id}": 1},
         )
         if not doc:
             return None
 
-        u = doc["users"][0]
+        u = doc["users"][str(user_id)]
         return FileSource(
             chat_id=u["chat_id"],
             message_id=u["message_id"],
             time=u["added_at"],
         )
+    
+    async def upsert_location(self, bot_id: int, loc: InputTypeLocation) -> None:
+        await self.files.update_one(
+            {"_id": loc.id},
+            {
+                "$set": {
+                    f"location.{bot_id}": {
+                        "access_hash": loc.access_hash,
+                        "file_reference": loc.file_reference,
+                    }
+                }
+            },
+        )
 
     async def get_files(
         self, user_id: int, offset: int = 0, limit: Optional[int] = None
     ) -> AsyncGenerator[tuple[int, str], None]:
-    
         cursor = self.files.find(
-            {"users.user_id": user_id},
-            {"file_name": 1},
-        ).sort("users.added_at", -1)
+            {f"users.{user_id}": {"$exists": True}},
+            {"file_name": 1, f"users.{user_id}.added_at": 1},
+        ).sort(f"users.{user_id}.added_at", -1)
 
         if offset:
             cursor = cursor.skip(offset)
@@ -125,16 +133,16 @@ class FileDB(BaseStorage):
     async def get_file_users(self, file_id: int) -> set[int]:
         doc = await self.files.find_one(
             {"_id": file_id},
-            {"users.user_id": 1},
+            {"users": 1},
         )
-        if not doc:
+        if not doc or "users" not in doc:
             return set()
-
-        return {u["user_id"] for u in doc.get("users", [])}
+    
+        return {int(uid) for uid in doc["users"].keys()}
 
     async def total_files(self, user_id: int) -> int:
         return await self.files.count_documents(
-            {"users.user_id": user_id}
+            {f"users.{user_id}": {"$exists": True}}
         )
 
     async def delete_file(self, file_id: int) -> bool:
@@ -144,6 +152,6 @@ class FileDB(BaseStorage):
     async def remove_file(self, file_id: int, user_id: int) -> bool:
         res = await self.files.update_one(
             {"_id": file_id},
-            {"$pull": {"users": {"user_id": user_id}}},
+            {"$unset": {f"users.{user_id}": ""}},
         )
         return res.modified_count > 0

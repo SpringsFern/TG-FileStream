@@ -30,32 +30,15 @@ class DB:
 
     @classmethod
     async def init(cls) -> None:
-        backend = Config.DB_BACKEND.lower()
-
-        try:
-            db_cls = _BACKENDS[backend]
-        except KeyError:
-            raise RuntimeError(
-                f"Unsupported DB_BACKEND '{Config.DB_BACKEND}'. "
-                f"Valid options: {', '.join(_BACKENDS)}"
-            )
+        backend = Config.DB_BACKEND
+        db_cls = _BACKENDS[backend]
 
         cls.db = db_cls()
-
-        await cls.db.connect(
-            host=Config.DB_HOST,
-            port=Config.DB_PORT,
-            user=getattr(Config, "DB_USER", None),
-            password=getattr(Config, "DB_PASS", None),
-            db=Config.DB_NAME,
-            minsize=1,
-            maxsize=5,
-        )
-
+        await cls.db.connect(**Config.DB_CONFIG)
         await cls.db.init_db()
 
     @classmethod
-    async def close(cls) -> None:
-        if cls.db is not None:
+    async def close(cls):
+        if cls.db:
             await cls.db.close()
             cls.db = None

@@ -21,14 +21,14 @@ from tgfs.database.database import BaseStorage
 from tgfs.types import GroupInfo
 
 class GroupDB(BaseStorage):
-    async def create_group(self, user_id: int, name: str) -> int:
-        res = await self.groups.insert_one({
+    async def create_group(self, group_id: int, user_id: int, name: str) -> None:
+        await self.groups.insert_one({
+            "_id": group_id,
             "user_id": user_id,
             "name": name,
             "created_at": datetime.now(timezone.utc),
-            "files": [],
+            "files": {},
         })
-        return res.inserted_id
 
     async def add_file_to_group(
         self,
@@ -38,30 +38,24 @@ class GroupDB(BaseStorage):
         order: Optional[int] = None,
     ) -> None:
         if order is None:
-            await self.groups.update_one(
+            doc = await self.groups.find_one(
                 {"_id": group_id, "user_id": user_id},
-                {
-                    "$push": {
-                        "files": {
-                            "file_id": file_id,
-                            "order": {"$size": "$files"},
-                        }
-                    }
-                },
+                {"files": 1},
             )
-        else:
-            await self.groups.update_one(
-                {"_id": group_id, "user_id": user_id},
-                {
-                    "$pull": {"files": {"file_id": file_id}},
-                    "$push": {
-                        "files": {
-                            "$each": [{"file_id": file_id, "order": order}],
-                            "$sort": {"order": 1},
-                        }
-                    },
-                },
-            )
+
+            order = 1
+            if doc and "files" in doc:
+                order = len(doc["files"])+1
+
+        await self.groups.update_one(
+            {"_id": group_id, "user_id": user_id},
+            {
+                "$set": {
+                    f"files.{file_id}": {"order": order}
+                }
+            },
+            upsert=False,
+        )
 
     async def get_groups(
         self, user_id: int, offset: int = 0, limit: Optional[int] = None
@@ -89,14 +83,20 @@ class GroupDB(BaseStorage):
         if not doc:
             return None
 
-        files = sorted(doc.get("files", []), key=lambda x: x["order"])
+        files = [
+            int(fid)
+            for fid, _ in sorted(
+                doc.get("files", {}).items(),
+                key=lambda i: i[1]["order"]
+            )
+        ]
 
         return GroupInfo(
             group_id=doc["_id"],
             user_id=doc["user_id"],
             name=doc["name"],
             created_at=doc["created_at"],
-            files=[f["file_id"] for f in files],
+            files=files
         )
 
     async def delete_group(self, group_id: int, user_id: int) -> None:
@@ -117,11 +117,11 @@ class GroupDB(BaseStorage):
             {
                 "_id": group_id,
                 "user_id": user_id,
-                "files.file_id": file_id,
+                f"files.{file_id}": {"$exists": True},
             },
             {
                 "$set": {
-                    "files.$.order": new_order
+                    f"files.{file_id}.order": new_order
                 }
             },
         )

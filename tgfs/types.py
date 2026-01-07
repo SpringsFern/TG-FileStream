@@ -45,10 +45,9 @@ class FileInfo:
 
 @dataclass
 class FileSource:
-    __slots__ = ("time", "chat_id", "message_id")
     chat_id: int
     message_id: int
-    time: Optional[datetime.datetime]
+    time: Optional[datetime.datetime] = None
 
 
 @dataclass

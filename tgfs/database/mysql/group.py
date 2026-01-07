@@ -24,20 +24,18 @@ from tgfs.types import GroupInfo
 class GroupDB(BaseStorage):
     _list_lock = asyncio.Lock()
 
-    async def create_group(self, user_id: int, name: str) -> int:
+    async def create_group(self, group_id: int, user_id: int, name: str) -> None:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 try:
                     await cur.execute(
                         """
-                        INSERT INTO FILE_GROUP (user_id, name)
-                        VALUES (%s, %s)
+                        INSERT INTO FILE_GROUP (group_id, user_id, name)
+                        VALUES (%s, %s, %s)
                         """,
-                        (user_id, name)
+                        (group_id, user_id, name)
                     )
-                    group_id = cur.lastrowid
                     await conn.commit()
-                    return group_id
                 except Exception:
                     await conn.rollback()
                     raise

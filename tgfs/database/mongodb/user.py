@@ -18,7 +18,7 @@ from typing import Optional, AsyncGenerator
 from datetime import datetime, timezone
 
 from tgfs.database.database import BaseStorage
-from tgfs.types import User
+from tgfs.types import Status, User
 
 class UserDB(BaseStorage):
     async def get_user(self, user_id: int) -> Optional[User]:
@@ -32,7 +32,7 @@ class UserDB(BaseStorage):
             ban_date=doc.get("ban_date"),
             warns=doc["warns"],
             preferred_lang=doc["preferred_lang"],
-            curt_op=doc["curt_op"],
+            curt_op=Status(doc["curt_op"]),
             op_id=doc["op_id"],
         )
 

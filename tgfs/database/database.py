@@ -26,9 +26,7 @@ class BaseStorage(ABC):
     """
 
     @abstractmethod
-    async def connect(self, *, host: str, port: int = 3306, user: str, password: str,
-                      db: str, minsize: int = 1, maxsize: int = 10, autocommit: bool = False,
-                      connect_timeout: int = 10) -> None:
+    async def connect(self, **kwargs) -> None:
         """
         Establish a connection to the backend.
 
@@ -97,7 +95,7 @@ class BaseStorage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def create_group(self, user_id: int, name: str) -> int:
+    async def create_group(self, group_id: int, user_id: int, name: str) -> None:
         raise NotImplementedError
 
     @abstractmethod
