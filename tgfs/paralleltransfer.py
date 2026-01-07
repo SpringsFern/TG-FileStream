@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# Modifications made by Deekshith SH, 2025
-# Copyright (C) 2025 Deekshith SH
+# Modifications made by Deekshith SH, 2025-2026
+# Copyright (C) 2025-2026 Deekshith SH
 
 # pylint: disable=protected-access
 
