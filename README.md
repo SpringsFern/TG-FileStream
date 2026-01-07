@@ -33,7 +33,7 @@ The original Python version became inactive after EverythingSuckz rewrote the pr
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/DeekshithSH/TG-FileStream.git
+git clone https://github.com/SpringsFern/TG-FileStream.git
 cd TG-FileStream
 ```
 
@@ -45,7 +45,7 @@ pip install -r requirements.txt
 
 ### 3. Create/Import Database
 
-Import SQL file located in `tgfs/database/mysql.sql`
+Import SQL file located in `tgfs/database/mysql/schema.sql`
 
 ### 4. Create a `.env` file
 
@@ -59,10 +59,8 @@ BIN_CHANNEL=-1002605638795
 HOST=0.0.0.0
 PORT=8080
 PUBLIC_URL=http://127.0.0.1:8080
-DB_HOST=localhost
-DB_USER=root
-DB_PASS=root
-DB_NAME=FTL
+DB_BACKEND=mongodb
+MONGODB_URI=mongodb://admin:pAswaRd@192.168.27.1
 ```
 
 ### 5. Run the server
@@ -81,28 +79,46 @@ python3 -m tgfs
 | `API_HASH`           | ✅                     | API hash from [my.telegram.org](https://my.telegram.org)                     |
 | `BOT_TOKEN`          | ✅                     | Bot token from [@BotFather](https://t.me/BotFather)                          |
 | `BIN_CHANNEL`        | ✅                     | Channel ID where files sent to the bot are stored                            |
+| `DB_BACKEND`         | ✅                     | Which Database server to use. either `mongodb` or `mysql`                    |
 | `HOST`               | `0.0.0.0`              | Host address to bind the server (default: `0.0.0.0`)                         |
 | `PORT`               | `8080`                 | Port to run the server on (default: `8080`)                                  |
 | `PUBLIC_URL`         | `https://0.0.0.0:8080` | Public-facing URL used to generate download links                            |
+| `DEBUG`              | `False`                | Show Extra Logs                                                              |
 | `CONNECTION_LIMIT`   | `20`                   | Number of connections to create per DC for a single client                   |
 | `CACHE_SIZE`         | `128`                  | Number of file info objects to cache                                         |
 | `DOWNLOAD_PART_SIZE` | `1048576 (1MB)`        | Number of bytes to request in a single chunk                                 |
 | `NO_UPDATE`          | `False`                | Whether to reply to messages sent to the bot (True to disable replies)       |
-| `DB_HOST`            | ✅                     | Database Host Name                                                           |
-| `DB_USER`            | ✅                     | Database User Name                                                           |
-| `DB_PASS`            | ✅                     | Database Password                                                            |
-| `DB_NAME`            | ✅                     | Database Name                                                                |
+| `FILE_INDEX_LIMIT`   | `10`                   | Number of files to display at once with `/files` command                     |
+| `MAX_WARNS`          | `3`                    | Maximum number of warns before user get banned                               |
+| `ADMIN_IDS`          | `Null`                 | User id of users who can use admin commands. Each id is seperated by `,`     |
 
+### Multi Token Environment Variables
+| Variable       | Required/Default | Description                                                                  |
+| -------------- | ---------------- | ---------------------------------------------------------------------------- |
+| `MULTI_TOKENx` | ✅               | Use Multiple Telegram Clients when downloading files to avoid flood wait, Replace x with Number |
+|                |                  | Example: |
+| `MULTI_TOKEN1` |                  | MULTI_TOKEN1=1234567890:AAExampleBotTokenGeneratedHere|
+| `MULTI_TOKEN2` |                  | MULTI_TOKEN2=0987654321:AAExampleBotTokenGeneratedHere|
+| `MULTI_TOKEN3` |                  | MULTI_TOKEN3=5432167890:AAExampleBotTokenGeneratedHere|
 
+### MySQL Environment Variables
 
-- `MULTI_TOKENx`: Use Multiple Telegram Clients when downloading files to avoid flood wait, Replace x with Number
+| Variable         | Required/Default | Description                                |
+| ---------------- | ---------------- | ------------------------------------------ |
+| `MYSQL_HOST`     | ✅               | MySQL DataBase Host Name                   |
+| `MYSQL_PORT`     | ✅               | MySQL Database Port Number                 |
+| `MYSQL_USER`     | ✅               | MySQL Database Username                    |
+| `MYSQL_PASSWORD` | ✅               | MySQL Database Password                    |
+| `MYSQL_DB`       | ✅               | MySQL Database Name                        |
+| `MYSQL_MINSIZE`  | `1`              | Minimum sizes of the MySQL Connection pool |
+| `MYSQL_MAXSIZE`  | `5`              | Maximum sizes of the MySQL Connection pool |
 
-example:
-```
-MULTI_TOKEN1=1234567890:AAExampleBotTokenGeneratedHere
-MULTI_TOKEN2=0987654321:AAExampleBotTokenGeneratedHere
-MULTI_TOKEN3=5432167890:AAExampleBotTokenGeneratedHere
-```
+### MongoDB Environment Variables
+
+| Variable         | Required/Default | Description           |
+| ---------------- | ---------------- | --------------------- |
+| `MONGODB_URI`    | ✅               | MongoDB Database URI  |
+| `MONGODB_DBNAME` | `TGFS`           | MongoDB Database name |
 
 ---
 
@@ -124,7 +140,7 @@ This will stream the file directly from Telegram servers to the client.
 
 ## 🛠️ Contributing & Reporting Issues
 
-Found a bug or have a feature request? Please [open an issue](https://github.com/DeekshithSH/TG-FileStream/issues) on GitHub.
+Found a bug or have a feature request? Please [open an issue](https://github.com/SpringsFern/TG-FileStream/issues) on GitHub.
 
 ### 🐞 Reporting Issues
 When reporting a bug, **please include**:

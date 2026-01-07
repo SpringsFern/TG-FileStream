@@ -3,3 +3,5 @@ aiohttp
 python-dotenv
 cryptg
 aiomysql
+motor
+dnspython
