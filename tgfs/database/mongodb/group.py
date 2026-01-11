@@ -17,11 +17,15 @@
 from typing import AsyncGenerator, Optional
 from datetime import datetime, timezone
 
+from motor.motor_asyncio import AsyncIOMotorCollection
+
 from tgfs.database.database import BaseStorage
 from tgfs.types import GroupInfo
 
 class GroupDB(BaseStorage):
-    async def create_group(self, group_id: int, user_id: int, name: str) -> None:
+    groups: AsyncIOMotorCollection
+    async def create_group(self, user_id: int, name: str) -> int:
+        group_id = await self.group_counter()
         await self.groups.insert_one({
             "_id": group_id,
             "user_id": user_id,

@@ -17,12 +17,14 @@
 from datetime import datetime, timezone
 from typing import AsyncGenerator, Optional
 
+from motor.motor_asyncio import AsyncIOMotorCollection
 from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
 
 from tgfs.database.database import BaseStorage
 from tgfs.types import FileInfo, FileSource, InputTypeLocation
 
 class FileDB(BaseStorage):
+    files: AsyncIOMotorCollection
     async def add_file(self, user_id: int, file: FileInfo, source: FileSource) -> None:
         await self.files.update_one(
             {"_id": file.id},

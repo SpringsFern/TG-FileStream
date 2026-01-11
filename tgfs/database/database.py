@@ -95,7 +95,7 @@ class BaseStorage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def create_group(self, group_id: int, user_id: int, name: str) -> None:
+    async def create_group(self, user_id: int, name: str) -> int:
         raise NotImplementedError
 
     @abstractmethod

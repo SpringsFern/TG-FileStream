@@ -17,10 +17,13 @@
 from typing import Optional, AsyncGenerator
 from datetime import datetime, timezone
 
+from motor.motor_asyncio import AsyncIOMotorCollection
+
 from tgfs.database.database import BaseStorage
 from tgfs.types import Status, User
 
 class UserDB(BaseStorage):
+    users: AsyncIOMotorCollection
     async def get_user(self, user_id: int) -> Optional[User]:
         doc = await self.users.find_one({"_id": user_id})
         if not doc:

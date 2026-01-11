@@ -104,14 +104,20 @@ async def handle_done_command(evt: events.NewMessage.Event, user = None) -> None
         min_id = user.op_id+1
         max_id = msg.id
         order=0
-        await DB.db.create_group(msg.id, user.user_id, msg.id)
+        group_id = await DB.db.create_group(user.user_id, msg.id)
         file_msgs: list[Message] = await client.get_messages(
             entity=msg.chat_id,
             ids=range(min_id, max_id),
         )
+        file_msgs = list(filter(lambda m: m.file, file_msgs))
+        if not file_msgs:
+            await DB.db.delete_group(group_id, user.user_id)
+            await evt.reply("No files were added to the group. Operation cancelled.")
+            user.curt_op = Status.NO_OP
+            user.op_id = 0
+            await DB.db.upsert_user(user)
+            return
         for file_msg in file_msgs:
-            if not file_msg.file:
-                continue
             dc_id, location = cast(tuple[int, InputTypeLocation], get_input_location(file_msg.media))
             file_info = FileInfo(
                 id=location.id,
@@ -132,17 +138,10 @@ async def handle_done_command(evt: events.NewMessage.Event, user = None) -> None
                 location
             )
             order+=1
-            await DB.db.add_file_to_group(msg.id, user.user_id, file_info.id, order)
-        if order == 0:
-            await DB.db.delete_group(msg.id, user.user_id)
-            await evt.reply("No files were added to the group. Operation cancelled.")
-            user.curt_op = Status.NO_OP
-            user.op_id = 0
-            await DB.db.upsert_user(user)
-            return
+            await DB.db.add_file_to_group(group_id, user.user_id, file_info.id, order)
         await evt.reply("Send a name for your group of files")
         user.curt_op = Status.GROUP_NAME
-        user.op_id = msg.id
+        user.op_id = group_id
         await DB.db.upsert_user(user)
     else:
         await evt.reply("Unknown operation state.")

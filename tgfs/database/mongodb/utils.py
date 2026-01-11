@@ -16,12 +16,15 @@
 
 import os
 
+from motor.motor_asyncio import AsyncIOMotorCollection
 from bson.binary import Binary
+from pymongo import ReturnDocument
 
 from tgfs.database.database import BaseStorage
 from tgfs.types import SUPPORTED_TYPE
 
 class UtilDB(BaseStorage):
+    config: AsyncIOMotorCollection
     async def get_secret(self, rotate: bool = False) -> bytes:
         if not rotate:
             doc = await self.config.find_one({"_id": "link.secret"})
@@ -49,3 +52,11 @@ class UtilDB(BaseStorage):
             upsert=True,
         )
 
+    async def group_counter(self) -> int:
+        result = await self.config.find_one_and_update(
+            {"_id": "group.counter"},
+            {"$inc": {"value": 1}},
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        return result["value"]
