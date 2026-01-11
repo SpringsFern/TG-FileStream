@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from os import environ
-from typing import Any
+from typing import Any, Optional
 
 try:
     from dotenv import load_dotenv
@@ -149,4 +149,5 @@ class Config:
     DB_CONFIG: dict[str, Any] = load_db_config(DB_BACKEND)
 
     # ---------- Security ----------
-    SECRET: bytes | None = None
+    SECRET: Optional[bytes] = None
+    BOT_ID: Optional[int] = None

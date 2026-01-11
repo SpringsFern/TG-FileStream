@@ -33,6 +33,7 @@ class GroupDB(BaseStorage):
             "created_at": datetime.now(timezone.utc),
             "files": {},
         })
+        return group_id
 
     async def add_file_to_group(
         self,

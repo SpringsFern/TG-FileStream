@@ -17,6 +17,7 @@
 import logging
 
 from telethon import Button, events
+from telethon.tl.types import InputMediaDocument, InputMediaPhoto
 
 from tgfs.config import Config
 from tgfs.telegram import client
@@ -88,6 +89,7 @@ async def handle_list_page(evt: events.CallbackQuery.Event) -> None:
         nav.append(Button.inline(">>", f"{kind}_page_{page_no + 1}"))
 
     buttons.append(nav)
+    buttons.append([Button.inline("Back", b"files_menu")])
 
     await evt.edit(
         f"You have **{total_items}** {label}s:",
@@ -115,7 +117,11 @@ async def handle_fileinfo_button(evt: events.CallbackQuery.Event):
         f"File Type: {'Photo' if file_info.thumb_size else 'Document'}\n"
         f"Is Restricted: {'Yes' if file_info.is_deleted else 'No'}",
         buttons=[
-            [Button.url(file_info.file_name, url)],
+            [Button.url("External Link", url)],
+            [
+                Button.inline("Delete", f"fileinfo_delconf2_{file_info.id}_{page_no}"),
+                Button.inline("Get File", f"fileinfo_get_{file_info.id}")
+            ],
             [Button.inline("Back", f"fileinfo_page_{page_no}")]
         ]
     )
@@ -143,4 +149,61 @@ async def handle_groupinfo_button(evt: events.CallbackQuery.Event):
         f"created_at: {file_info.created_at}\n"
         f"Total Files: {len(file_info.files) if file_info.files else 0}",
         buttons=buttons
+    )
+
+@client.on(events.CallbackQuery(pattern=r"^fileinfo_get_(\d+)$"))
+async def handle_fileinfo_get_button(evt: events.CallbackQuery.Event):
+    file_id = int(evt.pattern_match.group(1))
+    user_id = evt.sender_id
+    file_info = await DB.db.get_file(file_id, user_id)
+    if file_info is None:
+        await evt.answer("File not found.")
+        return
+    location = await DB.db.get_location(file_info, Config.BOT_ID)
+    if not location:
+        await evt.answer("File location not found.")
+        return
+    input_media = InputMediaPhoto(location) if location.thumb_size else InputMediaDocument(location)
+    await client.send_file(user_id, input_media, caption=file_info.file_name)
+    
+
+@client.on(events.CallbackQuery(pattern=r"^fileinfo_delconf2_(\d+)_(\d+)$"))
+async def handle_fileinfo_del_button(evt: events.CallbackQuery.Event):
+    file_id = int(evt.pattern_match.group(1))
+    page_no = int(evt.pattern_match.group(2))
+    user_id = evt.sender_id
+    file_info = await DB.db.get_file(file_id, user_id)
+    if file_info is None:
+        await evt.answer("File not found.")
+        return
+    await evt.edit(
+        "Do you really want to delete this file?",
+        buttons=[
+            [Button.inline("Yes, Delete", f"fileinfo_delete_{file_id}_{page_no}")],
+            [Button.inline("Cancel", f"fileinfo_file_{file_id}_{page_no}")]
+        ]
+    )
+
+@client.on(events.CallbackQuery(pattern=r"^fileinfo_delete_(\d+)_(\d+)$"))
+async def handle_fileinfo_del_button(evt: events.CallbackQuery.Event):
+    file_id = int(evt.pattern_match.group(1))
+    page_no = int(evt.pattern_match.group(2))
+    user_id = evt.sender_id
+    file_info = await DB.db.get_file(file_id, user_id)
+    if file_info is None:
+        await evt.answer("File not found.")
+        return
+    await DB.db.remove_file(file_id, user_id)
+    await evt.edit("File deleted successfully.", buttons=[
+        [Button.inline("Back to Files", f"fileinfo_page_{page_no}")]
+    ])
+
+@client.on(events.CallbackQuery(pattern=r"^files_menu$"))
+async def handle_files_menu_button(evt: events.CallbackQuery.Event):
+    await evt.edit(
+        "Select the type of links you want to view.",
+        buttons=[
+            [Button.inline("Files", "fileinfo_page_0")],
+            [Button.inline("Groups", "groupinfo_page_0")]
+        ]
     )

@@ -50,6 +50,7 @@ async def start() -> None:
             client.session.save()
             break
     me: User = await client.get_me()
+    Config.BOT_ID = me.id
     transfer = ParallelTransferrer(client, me.id)
     transfer.post_init()
     multi_clients.append(transfer)

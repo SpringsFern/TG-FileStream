@@ -41,8 +41,7 @@ Available Commands:
 /help - Show this help message
 /group - Start creating a group of files
 /done - Finish adding files to the group
-/myfiles - List your uploaded files
-/mygroups - List your created groups
+/files - List your uploaded files or created groups
 """)
 
 @client.on(events.NewMessage(incoming=True, func=lambda x: x.is_private and x.file))
