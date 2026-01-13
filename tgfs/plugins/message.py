@@ -22,9 +22,10 @@ from telethon.custom import Message
 from telethon.utils import get_input_location
 
 from tgfs.config import Config
+from tgfs.plugins.custom import HANDLERS
 from tgfs.telegram import client, multi_clients
 from tgfs.database import DB
-from tgfs.types import FileInfo, FileSource, InputTypeLocation, Status
+from tgfs.types import FileInfo, FileSource, InputTypeLocation, Status, User
 from tgfs.utils import check_get_user, make_token
 
 log = logging.getLogger(__name__)
@@ -151,15 +152,27 @@ async def handle_text_message(evt: events.NewMessage.Event) -> None:
     user = await check_get_user(msg.sender_id, msg.id)
     if user is None:
         return
+
+    message = msg.message.strip()
     if user.curt_op == Status.GROUP_NAME:
-        group_id = user.op_id
-        name = msg.text.strip()
-        await DB.db.update_group_name(group_id, user.user_id, name)
-        user.curt_op = Status.NO_OP
-        user.op_id = 0
-        await DB.db.upsert_user(user)
-        token = make_token(user.user_id, group_id)
-        url = f"{Config.PUBLIC_URL}/group/{token}"
-        await evt.reply(f"Group '{name}' created!\n{url}")
+        await handle_group_name(evt, user)
     else:
+        for pattern, func in HANDLERS:
+            m = pattern.match(message)
+            if m:
+                await func(evt, user, m)
+                return
+
         await evt.reply("Unknown command")
+
+async def handle_group_name(evt: events.NewMessage.Event, user: User) -> None:
+    msg: Message = evt.message
+    name = msg.text.strip()
+    group_id = user.op_id
+    await DB.db.update_group_name(group_id, user.user_id, name)
+    user.curt_op = Status.NO_OP
+    user.op_id = 0
+    await DB.db.upsert_user(user)
+    token = make_token(user.user_id, group_id)
+    url = f"{Config.PUBLIC_URL}/group/{token}"
+    await evt.reply(f"Group '{name}' created!\n{url}")
