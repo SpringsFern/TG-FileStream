@@ -21,6 +21,7 @@ from aiohttp import web
 from telethon import functions
 from telethon.tl.types import User, Config
 
+from tgfs.info import Version, __version__
 from tgfs.log import log
 from tgfs.config import Config
 from tgfs.paralleltransfer import ParallelTransferrer
@@ -30,15 +31,28 @@ from tgfs.database import DB
 from tgfs.utils.utils import load_configs
 load_plugins('tgfs/patches')
 
-__version__ = "0.0.1"
-
 app = web.Application()
 app.add_routes(routes)
 runner = web.AppRunner(app)
 
+async def additional_check():
+    version = await DB.db.get_config_value("VERSION")
+    if version != __version__:
+        await DB.db.set_config_value("VERSION", __version__)
+        if not version:
+            return
+        await DB.db.set_config_value("OLD_VERSION", version)
+
+        # major = int(version.split(".", maxsplit=3)[0])
+        minor = int(version.split(".", maxsplit=3)[1])
+        if minor != Version.minor:
+            log.warning("version mismatch detected. Old version: %s, Current version: %s", version, __version__)
+
 async def start() -> None:
+    log.info("Initializing Database")
     await DB.init()
     await load_configs()
+    log.info("Starting Telegram Client")
     await client.start(bot_token=Config.BOT_TOKEN)
     if not Config.NO_UPDATE:
         load_plugins("tgfs/plugins")
@@ -56,9 +70,12 @@ async def start() -> None:
     transfer = ParallelTransferrer(client, me.id)
     transfer.post_init()
     multi_clients.append(transfer)
+    log.info("Starting Additional Clients")
     await start_clients()
+    log.info("Starting HTTP Server")
     await runner.setup()
     await web.TCPSite(runner, Config.HOST, Config.PORT).start()
+    log.info("Version: %s", __version__)
     log.info("Username: %s", me.username)
     log.info("DC ID: %d", getattr(client.session, "dc_id", None))
     log.info("URL: %s", Config.PUBLIC_URL)
