@@ -20,10 +20,10 @@ from aiohttp import web
 
 from tgfs.config import Config
 from tgfs.paralleltransfer import ParallelTransferrer
-from tgfs.utils import make_token, parse_token, update_location
+from tgfs.utils.utils import make_token, parse_token, update_location
 from tgfs.telegram import multi_clients
 from tgfs.database import DB
-from tgfs.types import FileInfo
+from tgfs.utils.types import FileInfo
 
 log = logging.getLogger(__name__)
 routes = web.RouteTableDef()

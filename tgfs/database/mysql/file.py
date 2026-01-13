@@ -20,7 +20,7 @@ from typing import AsyncGenerator, Optional
 from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
 
 from tgfs.database.database import BaseStorage
-from tgfs.types import FileSource, FileInfo, InputTypeLocation
+from tgfs.utils.types import FileSource, FileInfo, InputTypeLocation
 
 class FileDB(BaseStorage):
     async def add_file(self, user_id: int, file: FileInfo, source: FileSource) -> None:

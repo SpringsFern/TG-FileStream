@@ -21,7 +21,7 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
 
 from tgfs.database.database import BaseStorage
-from tgfs.types import FileInfo, FileSource, InputTypeLocation
+from tgfs.utils.types import FileInfo, FileSource, InputTypeLocation
 
 class FileDB(BaseStorage):
     files: AsyncIOMotorCollection

@@ -39,7 +39,7 @@ from telethon.tl.types import DcOption
 from telethon.errors import DcIdInvalidError
 
 from tgfs.config import Config
-from tgfs.types import InputTypeLocation
+from tgfs.utils.types import InputTypeLocation
 
 root_log = logging.getLogger(__name__)
 

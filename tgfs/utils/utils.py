@@ -26,7 +26,7 @@ from telethon.tl.custom import Message
 
 from tgfs.config import Config
 from tgfs.paralleltransfer import ParallelTransferrer
-from tgfs.types import FileSource, InputTypeLocation
+from tgfs.utils.types import FileSource, InputTypeLocation
 from tgfs.telegram import client
 from tgfs.database import DB
 

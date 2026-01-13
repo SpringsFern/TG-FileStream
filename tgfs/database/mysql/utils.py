@@ -20,7 +20,7 @@ import json
 from typing import Optional
 
 from tgfs.database.database import BaseStorage
-from tgfs.types import SUPPORTED_TYPE
+from tgfs.utils.types import SUPPORTED_TYPE
 
 def encode_value(value: SUPPORTED_TYPE) -> tuple[bytes, str]:
     if isinstance(value, bytes):

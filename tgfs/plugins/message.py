@@ -25,8 +25,8 @@ from tgfs.config import Config
 from tgfs.plugins.custom import HANDLERS
 from tgfs.telegram import client, multi_clients
 from tgfs.database import DB
-from tgfs.types import FileInfo, FileSource, InputTypeLocation, Status, User
-from tgfs.utils import check_get_user, make_token
+from tgfs.utils.types import FileInfo, FileSource, InputTypeLocation, Status, User
+from tgfs.utils.utils import check_get_user, make_token
 
 log = logging.getLogger(__name__)
 

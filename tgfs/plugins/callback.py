@@ -22,7 +22,7 @@ from telethon.tl.types import InputMediaDocument, InputMediaPhoto
 from tgfs.config import Config
 from tgfs.telegram import client
 from tgfs.database import DB
-from tgfs.utils import make_token
+from tgfs.utils.utils import make_token
 
 log = logging.getLogger(__name__)
 

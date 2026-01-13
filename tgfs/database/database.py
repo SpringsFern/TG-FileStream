@@ -17,7 +17,7 @@
 from abc import ABC, abstractmethod
 from typing import AsyncGenerator, Optional
 
-from tgfs.types import SUPPORTED_TYPE, FileInfo, FileSource, GroupInfo, InputTypeLocation, User
+from tgfs.utils.types import SUPPORTED_TYPE, FileInfo, FileSource, GroupInfo, InputTypeLocation, User
 
 
 class BaseStorage(ABC):

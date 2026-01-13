@@ -21,7 +21,7 @@ from telethon.custom import Message
 
 from tgfs.telegram import client
 from tgfs.database import DB
-from tgfs.utils import check_get_user
+from tgfs.utils.utils import check_get_user
 
 log = logging.getLogger(__name__)
 

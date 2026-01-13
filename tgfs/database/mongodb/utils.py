@@ -21,7 +21,7 @@ from bson.binary import Binary
 from pymongo import ReturnDocument
 
 from tgfs.database.database import BaseStorage
-from tgfs.types import SUPPORTED_TYPE
+from tgfs.utils.types import SUPPORTED_TYPE
 
 class UtilDB(BaseStorage):
     config: AsyncIOMotorCollection

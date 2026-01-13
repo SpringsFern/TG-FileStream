@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorCollection
 
 from tgfs.database.database import BaseStorage
-from tgfs.types import GroupInfo
+from tgfs.utils.types import GroupInfo
 
 class GroupDB(BaseStorage):
     groups: AsyncIOMotorCollection

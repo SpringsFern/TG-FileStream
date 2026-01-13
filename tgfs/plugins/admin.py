@@ -24,7 +24,7 @@ from telethon.custom import Message
 from tgfs.config import Config
 from tgfs.telegram import client
 from tgfs.database import DB
-from tgfs.utils import parse_token
+from tgfs.utils.utils import parse_token
 
 def is_admin(user_id: int):
     return True #user_id in Config.ADMIN_IDS

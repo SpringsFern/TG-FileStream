@@ -27,8 +27,10 @@ from tgfs.paralleltransfer import ParallelTransferrer
 from tgfs.telegram import client, load_plugins, multi_clients, start_clients
 from tgfs.routes import routes
 from tgfs.database import DB
-from tgfs.utils import load_configs
+from tgfs.utils.utils import load_configs
 load_plugins('tgfs/patches')
+
+__version__ = "0.0.1"
 
 app = web.Application()
 app.add_routes(routes)

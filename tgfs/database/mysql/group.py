@@ -19,7 +19,7 @@ import aiomysql
 from typing import AsyncGenerator, Optional
 
 from tgfs.database.database import BaseStorage
-from tgfs.types import GroupInfo
+from tgfs.utils.types import GroupInfo
 
 class GroupDB(BaseStorage):
     _list_lock = asyncio.Lock()

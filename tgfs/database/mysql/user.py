@@ -18,7 +18,7 @@ import aiomysql
 from typing import AsyncGenerator, Optional
 
 from tgfs.database.database import BaseStorage
-from tgfs.types import User
+from tgfs.utils.types import User
 
 class UserDB(BaseStorage):
     async def get_user(self, user_id: int) -> Optional[User]:

@@ -24,8 +24,8 @@ from telethon.tl.types import InputMediaDocument, InputMediaPhoto
 from tgfs.config import Config
 from tgfs.telegram import client
 from tgfs.database import DB
-from tgfs.types import User
-from tgfs.utils import parse_token
+from tgfs.utils.types import User
+from tgfs.utils.utils import parse_token
 
 log = logging.getLogger(__name__)
 
