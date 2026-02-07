@@ -90,9 +90,9 @@ python3 -m tgfs
 | `PUBLIC_URL`         | `https://0.0.0.0:8080` | Public-facing URL used to generate download links                            |
 | `DEBUG`              | `False`                | Show Extra Logs                                                              |
 | `CONNECTION_LIMIT`   | `20`                   | Number of connections to create per DC for a single client                   |
-| `CACHE_SIZE`         | `128`                  | Number of file info objects to cache                                         |
 | `DOWNLOAD_PART_SIZE` | `1048576 (1MB)`        | Number of bytes to request in a single chunk                                 |
 | `NO_UPDATE`          | `False`                | Whether to reply to messages sent to the bot (True to disable replies)       |
+| `SEQUENTIAL_UPDATES` | `False`                | Handle telegram updates sequentially                                         |
 | `FILE_INDEX_LIMIT`   | `10`                   | Number of files to display at once with `/files` command                     |
 | `MAX_WARNS`          | `3`                    | Maximum number of warns before user get banned                               |
 | `ADMIN_IDS`          | `Null`                 | User id of users who can use admin commands. Each id is seperated by `,`     |

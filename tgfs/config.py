@@ -129,12 +129,13 @@ class Config:
 
     DEBUG: bool = _env_bool("DEBUG")
     EXT_DEBUG: bool = _env_bool("EXT_DEBUG")
-    NO_UPDATE: bool = _env_bool("NO_UPDATE")
 
-    CACHE_SIZE: int = _env_int("CACHE_SIZE", 128)
+    # CACHE_SIZE: int = _env_int("CACHE_SIZE", 128)
     DOWNLOAD_PART_SIZE: int = _env_int("DOWNLOAD_PART_SIZE", 1024 * 1024)
 
     # ---------- Bot behavior ----------
+    NO_UPDATE: bool = _env_bool("NO_UPDATE")
+    SEQUENTIAL_UPDATES = _env_bool("SEQUENTIAL_UPDATES")
     FILE_INDEX_LIMIT: int = _env_int("FILE_INDEX_LIMIT", 10)
     MAX_WARNS: int = _env_int("MAX_WARNS", 3)
 

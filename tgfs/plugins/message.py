@@ -17,7 +17,7 @@
 import logging
 from typing import cast
 
-from telethon import events
+from telethon import Button, events
 from telethon.custom import Message
 from telethon.utils import get_input_location
 
@@ -75,7 +75,16 @@ async def handle_file_message(evt: events.NewMessage.Event, msg=None) -> None:
     # fwd_msg: Message = await msg.forward_to(Config.BIN_CHANNEL)
     token = make_token(msg.sender_id, file_info.id)
     url = f"{Config.PUBLIC_URL}/dl/{token}"
-    await evt.reply(url)
+    try:
+        await evt.reply(
+            url,
+            buttons=[
+                [Button.url("Download", url)],
+            ]
+        )
+    except Exception as e:
+        log.error("Failed to send download link: %s", e)
+        await evt.reply(url)
     log.info("Generated Link %s", url)
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^/group", func=lambda x: x.is_private and not x.file))

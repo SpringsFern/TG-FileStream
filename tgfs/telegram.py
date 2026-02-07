@@ -36,7 +36,8 @@ client = TelegramClient(
     "tg-filestream",
     api_id=Config.API_ID,
     api_hash=Config.API_HASH,
-    receive_updates=not Config.NO_UPDATE
+    receive_updates=not Config.NO_UPDATE,
+    sequential_updates=Config.SEQUENTIAL_UPDATES
 )
 
 async def _start_client(token: str) -> Optional[ParallelTransferrer]:
