@@ -36,8 +36,9 @@ async def handle_root(_: web.Request):
 
 # @routes.get(r"/{msg_id:-?\d+}/{name}")
 @routes.get("/dl/{payload}/{sig}")
-async def handle_file_request(req: web.Request) -> web.Response:
-    head: bool = req.method == "HEAD"
+async def handle_file_request(req: web.Request, head: bool= None) -> web.Response:
+    if not head:
+        head: bool = req.method == "HEAD"
     payload = req.match_info["payload"]
     sig = req.match_info["sig"]
     pt = parse_token(payload, sig)
@@ -91,3 +92,13 @@ async def handle_group_request(req: web.Request) -> web.Response:
         return web.Response(status=404, text="Group not found")
     resp = "".join(f"{Config.PUBLIC_URL}/dl/{make_token(user_id, file_id)}\n" for file_id in group.files)
     return web.Response(status=200, text=resp)
+
+@routes.get("/dl/{object_id}", allow_head=True)
+async def stream_handler(request: web.Request):
+    object_id = request.match_info["object_id"]
+    file = await DB.db.get_file_old(object_id)
+    if not file:
+        return web.Response(status=404, text="File not found")
+    token = make_token(file["user_id"], file["media_id"])
+    return web.HTTPFound(f"{Config.PUBLIC_URL}/dl/{token}")
+    

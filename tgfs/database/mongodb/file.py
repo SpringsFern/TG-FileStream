@@ -15,8 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import datetime, timezone
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, Optional, Union
 
+from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorCollection
 from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
 
@@ -157,3 +158,14 @@ class FileDB(BaseStorage):
             {"$unset": {f"users.{user_id}": ""}},
         )
         return res.modified_count > 0
+
+    async def get_file_old(self, file_id: str, user_id: int = None) -> Optional[dict[str, Union[ObjectId, int]]]:
+        query = {"_id": ObjectId(file_id)}
+        if user_id is not None:
+            query[f"users_id"] = user_id
+    
+        doc = await self.db.maplinks.find_one(query)
+        if not doc:
+            return None
+    
+        return doc
