@@ -33,7 +33,7 @@ load_plugins('tgfs/patches')
 
 app = web.Application()
 app.add_routes(routes)
-runner = web.AppRunner(app)
+runner = web.AppRunner(app, handler_cancellation=True)
 
 async def additional_check():
     version = await DB.db.get_config_value("VERSION")

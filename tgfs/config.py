@@ -125,7 +125,7 @@ class Config:
     PORT: int = _env_int("PORT", 8080)
     PUBLIC_URL: str = environ.get("PUBLIC_URL", f"http://{HOST}:{PORT}")
 
-    CONNECTION_LIMIT: int = _env_int("CONNECTION_LIMIT", 20)
+    CONNECTION_LIMIT: int = _env_int("CONNECTION_LIMIT", 5)
 
     DEBUG: bool = _env_bool("DEBUG")
     EXT_DEBUG: bool = _env_bool("EXT_DEBUG")
