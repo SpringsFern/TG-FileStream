@@ -6,11 +6,11 @@
 | Reuse code from `tgfilestream` (`paralleltransfer.py`) to fetch files from Telegram      | ✅ Done     |
 | Use multiple Telegram Bot accounts to avoid flood wait                                   | ✅ Done     |
 | Add support for multiple databases                                                       | ✅ Done     |
+| Support for multiple languages                                                           | ✅ Done     |
 | Share File Info Cache between multiple clients                                           | Not Planned |
 | Prefetch chunks                                                                          | Not Planned |
 | Cache Files                                                                              | Not Planned |
 | Add More options in /files command                                                       | ⏳ Pending  |
-| Support for multiple languages                                                           | ⏳ Pending  |
 
 ---
 

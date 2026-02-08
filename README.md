@@ -5,17 +5,6 @@
 
 **TG-FileStream** is a lightweight web server and Telegram client that acts as a proxy between Telegram servers and HTTP clients, allowing direct downloads of Telegram media files via HTTP.
 
----
-
-## 🔁 Project Background
-
-This project is a **successor** to  
-👉 [DeekshithSH/TG-FileStreamBot](https://github.com/DeekshithSH/TG-FileStreamBot),  
-which itself was a fork of  
-👉 [EverythingSuckz/TG-FileStreamBot](https://github.com/EverythingSuckz/TG-FileStreamBot).
-
-The original Python version became inactive after EverythingSuckz rewrote the project in Golang. Instead of continuing from the older Python codebase, this project is a fresh rewrite using [Telethon](https://github.com/LonamiWebs/Telethon) with a minimal approach.
-
 > 📌 Check out [TODO.md](./TODO.md) for the latest development progress and planned features.
 
 ---
@@ -48,11 +37,7 @@ cd TG-FileStream
 pip install -r requirements.txt
 ```
 
-### 3. Create/Import Database
-
-Import SQL file located in `tgfs/database/mysql/schema.sql`
-
-### 4. Create a `.env` file
+### 3. Create a `.env` file
 
 Store the required environment variables in a `.env` file:
 
@@ -68,7 +53,7 @@ DB_BACKEND=mongodb
 MONGODB_URI=mongodb://admin:pAswaRd@192.168.27.1
 ```
 
-### 5. Run the server
+### 4. Run the server
 
 ```bash
 python3 -m tgfs
@@ -89,13 +74,13 @@ python3 -m tgfs
 | `PORT`               | `8080`                 | Port to run the server on (default: `8080`)                                  |
 | `PUBLIC_URL`         | `https://0.0.0.0:8080` | Public-facing URL used to generate download links                            |
 | `DEBUG`              | `False`                | Show Extra Logs                                                              |
-| `CONNECTION_LIMIT`   | `20`                   | Number of connections to create per DC for a single client                   |
+| `CONNECTION_LIMIT`   | `5`                    | Number of connections to create per DC for a single client                   |
 | `DOWNLOAD_PART_SIZE` | `1048576 (1MB)`        | Number of bytes to request in a single chunk                                 |
 | `NO_UPDATE`          | `False`                | Whether to reply to messages sent to the bot (True to disable replies)       |
 | `SEQUENTIAL_UPDATES` | `False`                | Handle telegram updates sequentially                                         |
 | `FILE_INDEX_LIMIT`   | `10`                   | Number of files to display at once with `/files` command                     |
 | `MAX_WARNS`          | `3`                    | Maximum number of warns before user get banned                               |
-| `ADMIN_IDS`          | `Null`                 | User id of users who can use admin commands. Each id is seperated by `,`     |
+| `ADMIN_IDS`          | `None`                 | User id of users who can use admin commands. Each id is seperated by `,`     |
 
 ### Multi Token Environment Variables
 | Variable       | Required/Default | Description                                                                  |
@@ -107,6 +92,7 @@ python3 -m tgfs
 | `MULTI_TOKEN3` |                  | MULTI_TOKEN3=5432167890:AAExampleBotTokenGeneratedHere|
 
 ### MySQL Environment Variables
+Set the following variables if you choose MySQL as the database in `DB_BACKEND`
 
 | Variable         | Required/Default | Description                                |
 | ---------------- | ---------------- | ------------------------------------------ |
@@ -119,6 +105,7 @@ python3 -m tgfs
 | `MYSQL_MAXSIZE`  | `5`              | Maximum sizes of the MySQL Connection pool |
 
 ### MongoDB Environment Variables
+Set the following variables if you choose MongoDB as the database in `DB_BACKEND`
 
 | Variable         | Required/Default | Description           |
 | ---------------- | ---------------- | --------------------- |
@@ -161,7 +148,7 @@ When suggesting a new feature, **please include**:
 - Any alternatives you've considered
 
 **Example feature title:**  
-`[Feature] Add support for download progress feedback`
+`[Feature] Add support for viewing generated links`
 
 ---
 
