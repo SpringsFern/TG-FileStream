@@ -26,7 +26,7 @@ from telethon.tl.custom import Message
 
 from tgfs.config import Config
 from tgfs.paralleltransfer import ParallelTransferrer
-from tgfs.utils.types import FileSource, InputTypeLocation
+from tgfs.utils.types import FileSource, InputTypeLocation, User
 from tgfs.telegram import client
 from tgfs.database import DB
 
@@ -38,9 +38,9 @@ async def update_location(source: FileSource, transfer: ParallelTransferrer) -> 
     await DB.db.upsert_location(transfer.client_id, location)
     return location
 
-async def check_get_user(user_id: int, msg_id):
+async def check_get_user(user_id: int, msg_id, required: bool = True) -> Optional[User]:
     user = await DB.db.get_user(user_id)
-    if user is None:
+    if required and user is None:
         await client.send_message(
             user_id, "Please agree to the Terms of Service before using the bot.",
             buttons=[[Button.inline('Agree', f'tos_agree_{msg_id}'.encode('utf-8'))]]

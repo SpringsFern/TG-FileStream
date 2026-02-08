@@ -25,8 +25,10 @@ from tgfs.telegram import client
 from tgfs.database import DB
 from tgfs.utils.utils import parse_token
 
+
 def is_admin(user_id: int):
     return user_id in Config.ADMIN_IDS
+
 
 def parse_userid(token: str) -> Optional[int]:
     if token.isdigit():
@@ -36,7 +38,9 @@ def parse_userid(token: str) -> Optional[int]:
         if data:
             return data[0]
 
+
 log = logging.getLogger(__name__)
+
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^/help", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
 async def handle_help_command(evt: events.NewMessage.Event) -> None:
@@ -56,6 +60,7 @@ Admin Commands:
 download url strcture: "http://<PUBLIC_URL>/dl/<token>/<signature>"
 """)
 
+
 @client.on(events.NewMessage(incoming=True, pattern=r"^/ban (\d+) (.+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
 async def handle_ban_command(evt: events.NewMessage.Event) -> None:
     user_id = int(evt.pattern_match.group(1))
@@ -69,7 +74,8 @@ async def handle_ban_command(evt: events.NewMessage.Event) -> None:
         await client.send_message(user_id, f"Your banned\nReason: {reason}")
     else:
         await evt.reply(f"Unable to ban user {user_id}")
-    
+
+
 @client.on(events.NewMessage(incoming=True, pattern=r"^/warn (\d+) (.+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
 async def handle_warn_command(evt: events.NewMessage.Event) -> None:
     user_id = int(evt.pattern_match.group(1))
@@ -87,6 +93,7 @@ async def handle_warn_command(evt: events.NewMessage.Event) -> None:
     else:
         await evt.reply(f"Unable to warn user {user_id}")
 
+
 @client.on(events.NewMessage(incoming=True, pattern=r"^/unban (\d+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
 async def handle_unban_command(evt: events.NewMessage.Event) -> None:
     user_id = int(evt.pattern_match.group(1))
@@ -96,10 +103,11 @@ async def handle_unban_command(evt: events.NewMessage.Event) -> None:
     user.ban_date = None
     user.warns = 0
     if await DB.db.upsert_user(user):
-        await evt.reply(f"User has Unbanned and Warns reset to 0")
-        await client.send_message(user_id, f"You are unbanned now you can use this bot")
+        await evt.reply("User has Unbanned and Warns reset to 0")
+        await client.send_message(user_id, "You are unbanned now you can use this bot")
     else:
         await evt.reply(f"Unable to unban user {user_id}")
+
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^/clearwarns (\d+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
 async def handle_clearwarns_command(evt: events.NewMessage.Event) -> None:
@@ -110,9 +118,10 @@ async def handle_clearwarns_command(evt: events.NewMessage.Event) -> None:
     user.warns = 0
     if await DB.db.upsert_user(user):
         await evt.reply("Warns reset to 0")
-        await client.send_message(user_id, f"Your warns reset to 0")
+        await client.send_message(user_id, "Your warns reset to 0")
     else:
         await evt.reply(f"Unable to clear warns for user {user_id}")
+
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^/listfiles (\d+|[A-Za-z0-9_\-:/]+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
 async def handle_listfiles_command(evt: events.NewMessage.Event) -> None:
@@ -133,6 +142,7 @@ async def handle_listfiles_command(evt: events.NewMessage.Event) -> None:
     )
     await evt.reply(reply_text)
 
+
 @client.on(events.NewMessage(incoming=True, pattern=r"^/restrictfile (\d+|[A-Za-z0-9_\-:/]+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
 async def handle_restrictfile_command(evt: events.NewMessage.Event) -> None:
     file_id = evt.pattern_match.group(1)
@@ -149,13 +159,13 @@ async def handle_restrictfile_command(evt: events.NewMessage.Event) -> None:
     file.is_deleted = True
     await DB.db.update_file_restriction(file.id, file.is_deleted)
     await evt.reply(f"Restricted File with File Id {file.id}")
-    
+
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^/deletefile (?:(\d+) (\d+)|([A-Za-z0-9_\-:/]+))$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
 async def handle_deletefile_command(evt: events.NewMessage.Event) -> None:
     user_id = evt.pattern_match.group(1)
     file_id = evt.pattern_match.group(2)
-    token   = evt.pattern_match.group(3)
+    token = evt.pattern_match.group(3)
 
     if token:
         data = parse_token(token)
@@ -169,7 +179,8 @@ async def handle_deletefile_command(evt: events.NewMessage.Event) -> None:
         await evt.reply(f"Deleted file {file_id} from user [{user_id}](tg://user?id={user_id})")
     else:
         await evt.reply(f"Unable to delete file {file_id} associated with user [{user_id}](tg://user?id={user_id})")
-    
+
+
 @client.on(events.NewMessage(incoming=True, pattern=r"^/parsetoken ([A-Za-z0-9_\-:/]+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
 async def handle_parsetoken_command(evt: events.NewMessage.Event) -> None:
     token = evt.pattern_match.group(1)
@@ -178,4 +189,3 @@ async def handle_parsetoken_command(evt: events.NewMessage.Event) -> None:
         return await evt.reply("Invalid Token")
     user_id, file_id = data
     await evt.reply(f"Token {token} is associated with User ID {user_id} and File ID {file_id}")
-
