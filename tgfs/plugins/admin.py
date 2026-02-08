@@ -18,8 +18,7 @@ import datetime
 import logging
 from typing import Optional
 
-from telethon import events, Button
-from telethon.custom import Message
+from telethon import events
 
 from tgfs.config import Config
 from tgfs.telegram import client
@@ -27,7 +26,7 @@ from tgfs.database import DB
 from tgfs.utils.utils import parse_token
 
 def is_admin(user_id: int):
-    return True #user_id in Config.ADMIN_IDS
+    return user_id in Config.ADMIN_IDS
 
 def parse_userid(token: str) -> Optional[int]:
     if token.isdigit():
@@ -39,8 +38,26 @@ def parse_userid(token: str) -> Optional[int]:
 
 log = logging.getLogger(__name__)
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/user_ban (\d+) (.+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
-async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
+@client.on(events.NewMessage(incoming=True, pattern=r"^/help", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+async def handle_help_command(evt: events.NewMessage.Event) -> None:
+    await evt.reply(f"""
+Admin Commands:
+/ban <userid> <reason>: ban a user
+/warn <userid> <reason>: warn a user; after {Config.MAX_WARNS} warnings, the user will be banned
+/unban <userid>: unban a user
+/clearwarns <userid>: clear all warnings for a user
+
+/listfiles <fileid | token>: list users who generated a link for a specific file
+/restrictfile <fileid | token>: restrict a file link to prevent users from downloading the file
+/deletefile <userid> <fileid>: delete a file associated with a user
+/deletefile <token>: delete a file using its token
+/parsetoken <token>: parse a token to retrieve the file ID and user ID
+
+download url strcture: "http://<PUBLIC_URL>/dl/<token>/<signature>"
+""")
+
+@client.on(events.NewMessage(incoming=True, pattern=r"^/ban (\d+) (.+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+async def handle_ban_command(evt: events.NewMessage.Event) -> None:
     user_id = int(evt.pattern_match.group(1))
     reason = str(evt.pattern_match.group(2))
     user = await DB.db.get_user(user_id)
@@ -53,8 +70,8 @@ async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
     else:
         await evt.reply(f"Unable to ban user {user_id}")
     
-@client.on(events.NewMessage(incoming=True, pattern=r"^/user_warn (\d+) (.+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
-async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
+@client.on(events.NewMessage(incoming=True, pattern=r"^/warn (\d+) (.+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+async def handle_warn_command(evt: events.NewMessage.Event) -> None:
     user_id = int(evt.pattern_match.group(1))
     reason = str(evt.pattern_match.group(2))
     user = await DB.db.get_user(user_id)
@@ -68,10 +85,10 @@ async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
         await evt.reply(f"User has {user.warns}/{Config.MAX_WARNS} Warns")
         await client.send_message(user_id, f"You have {user.warns}/{Config.MAX_WARNS} Warns\nReason: {reason}")
     else:
-        await evt.reply(f"Unable to ban user {user_id}")
+        await evt.reply(f"Unable to warn user {user_id}")
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/user_unban (\d+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
-async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
+@client.on(events.NewMessage(incoming=True, pattern=r"^/unban (\d+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+async def handle_unban_command(evt: events.NewMessage.Event) -> None:
     user_id = int(evt.pattern_match.group(1))
     user = await DB.db.get_user(user_id)
     if not user:
@@ -82,10 +99,10 @@ async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
         await evt.reply(f"User has Unbanned and Warns reset to 0")
         await client.send_message(user_id, f"You are unbanned now you can use this bot")
     else:
-        await evt.reply(f"Unable to ban user {user_id}")
+        await evt.reply(f"Unable to unban user {user_id}")
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/user_clearwarns (\d+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
-async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
+@client.on(events.NewMessage(incoming=True, pattern=r"^/clearwarns (\d+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+async def handle_clearwarns_command(evt: events.NewMessage.Event) -> None:
     user_id = int(evt.pattern_match.group(1))
     user = await DB.db.get_user(user_id)
     if not user:
@@ -95,10 +112,10 @@ async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
         await evt.reply("Warns reset to 0")
         await client.send_message(user_id, f"Your warns reset to 0")
     else:
-        await evt.reply(f"Unable to ban user {user_id}")
+        await evt.reply(f"Unable to clear warns for user {user_id}")
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/file_users (\d+|[A-Za-z0-9_\-:/]+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
-async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
+@client.on(events.NewMessage(incoming=True, pattern=r"^/listfiles (\d+|[A-Za-z0-9_\-:/]+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+async def handle_listfiles_command(evt: events.NewMessage.Event) -> None:
     file_id = evt.pattern_match.group(1)
     if file_id.isdigit():
         file_id = int(file_id)
@@ -116,8 +133,8 @@ async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
     )
     await evt.reply(reply_text)
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/file_restrict (\d+|[A-Za-z0-9_\-:/]+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
-async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
+@client.on(events.NewMessage(incoming=True, pattern=r"^/restrictfile (\d+|[A-Za-z0-9_\-:/]+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+async def handle_restrictfile_command(evt: events.NewMessage.Event) -> None:
     file_id = evt.pattern_match.group(1)
     if file_id.isdigit():
         file_id = int(file_id)
@@ -134,8 +151,8 @@ async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
     await evt.reply(f"Restricted File with File Id {file.id}")
     
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/file_delete (?:(\d+) (\d+)|([A-Za-z0-9_\-:/]+))$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
-async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
+@client.on(events.NewMessage(incoming=True, pattern=r"^/deletefile (?:(\d+) (\d+)|([A-Za-z0-9_\-:/]+))$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+async def handle_deletefile_command(evt: events.NewMessage.Event) -> None:
     user_id = evt.pattern_match.group(1)
     file_id = evt.pattern_match.group(2)
     token   = evt.pattern_match.group(3)
@@ -148,8 +165,17 @@ async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:
     else:
         user_id = int(user_id)
         file_id = int(file_id)
-    if await DB.db.delete_file(file_id, user_id):
+    if await DB.db.remove_file(file_id, user_id):
         await evt.reply(f"Deleted file {file_id} from user [{user_id}](tg://user?id={user_id})")
     else:
         await evt.reply(f"Unable to delete file {file_id} associated with user [{user_id}](tg://user?id={user_id})")
     
+@client.on(events.NewMessage(incoming=True, pattern=r"^/parsetoken ([A-Za-z0-9_\-:/]+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+async def handle_parsetoken_command(evt: events.NewMessage.Event) -> None:
+    token = evt.pattern_match.group(1)
+    data = parse_token(token)
+    if not data:
+        return await evt.reply("Invalid Token")
+    user_id, file_id = data
+    await evt.reply(f"Token {token} is associated with User ID {user_id} and File ID {file_id}")
+
