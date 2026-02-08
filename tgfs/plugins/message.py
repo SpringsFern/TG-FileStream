@@ -23,7 +23,7 @@ from tgfs.config import Config
 from tgfs.plugins.custom import HANDLERS
 from tgfs.telegram import client
 from tgfs.database import DB
-from tgfs.utils.translation import get_lang
+from tgfs.utils.translation import get_lang, registry
 from tgfs.utils.types import Status, User
 from tgfs.utils.utils import check_get_user, make_token
 
@@ -79,3 +79,20 @@ async def handle_group_name(evt: events.NewMessage.Event, user: User) -> None:
     token = make_token(user.user_id, group_id)
     url = f"{Config.PUBLIC_URL}/group/{token}"
     await evt.reply(lang.GROUP_CREATED_TEXT.format(name=name, url=url))
+
+@client.on(events.NewMessage(incoming=True, pattern=r"^/setln(?:\s+([a-z]{2}))?$", func=lambda x: x.is_private and not x.file))
+async def handle_setln_command(evt: events.NewMessage.Event) -> None:
+    msg: Message = evt.message
+    user = await check_get_user(msg.sender_id, msg.id)
+    if user is None:
+        return
+    lang = get_lang(user)
+    ln_code = evt.pattern_match.group(1)
+    if ln_code is None or ln_code not in registry:
+        await evt.reply(lang.SETLN_USAGE_TEXT.format(supported_codes=", ".join(registry.keys())))
+        return
+    user.preferred_lang = ln_code
+    if await DB.db.upsert_user(user):
+        await evt.reply(lang.SETLN_SET_TO.format(ln_code=ln_code))
+    else:
+        await evt.reply(lang.SOMETHING_WENT_WRONG)
