@@ -18,6 +18,7 @@ import base64
 import hashlib
 import hmac
 import struct
+import time
 from typing import Optional, cast
 
 from telethon import Button
@@ -29,6 +30,8 @@ from tgfs.paralleltransfer import ParallelTransferrer
 from tgfs.utils.types import FileSource, InputTypeLocation, User
 from tgfs.telegram import client
 from tgfs.database import DB
+
+START_TIME = time.monotonic()
 
 async def update_location(source: FileSource, transfer: ParallelTransferrer) -> InputTypeLocation:
     message = cast(Message, await client.forward_messages(Config.BIN_CHANNEL, source.message_id, source.chat_id, drop_author=True))
@@ -89,3 +92,12 @@ def parse_token(p_b64: str, s_b64: Optional[str] = None) -> tuple[int, int] | No
         return user_id, file_id
     except Exception:
         return None
+
+def human_time(seconds: int):
+    mins, sec = divmod(seconds, 60)
+    hrs, mins = divmod(mins, 60)
+    days, hrs = divmod(hrs, 24)
+    return f"{days}d {hrs}h {mins}m {sec}s"
+
+def uptime_human():
+    return human_time(int(time.monotonic() - START_TIME))

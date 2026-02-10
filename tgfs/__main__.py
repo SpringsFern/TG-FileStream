@@ -19,7 +19,7 @@ import logging
 import traceback
 from aiohttp import web
 from telethon import functions
-from telethon.tl.types import User, Config
+from telethon.tl.types import User
 
 from tgfs.info import Version, __version__
 from tgfs.log import log

@@ -20,10 +20,9 @@ from aiohttp import web
 
 from tgfs.config import Config
 from tgfs.paralleltransfer import ParallelTransferrer
-from tgfs.utils.utils import make_token, parse_token, update_location
+from tgfs.utils.utils import make_token, parse_token, update_location, uptime_human
 from tgfs.telegram import multi_clients
 from tgfs.database import DB
-from tgfs.utils.types import FileInfo
 
 log = logging.getLogger(__name__)
 routes = web.RouteTableDef()
@@ -32,7 +31,10 @@ client_selection_lock = asyncio.Lock()
 
 @routes.get("/")
 async def handle_root(_: web.Request):
-    return web.json_response({transfer.client_id: [transfer.users] for transfer in multi_clients})
+    return web.json_response({
+        'uptime': uptime_human(),
+        'load': {transfer.client_id: transfer.users for transfer in multi_clients}
+    })
 
 # @routes.get(r"/{msg_id:-?\d+}/{name}")
 @routes.get("/dl/{payload}/{sig}")
