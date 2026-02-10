@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
 multi_clients: list[ParallelTransferrer] = []
 
 client = TelegramClient(
-    "tg-filestream",
+    "tg-filestream"+Config.SESSION_NAME,
     api_id=Config.API_ID,
     api_hash=Config.API_HASH,
     receive_updates=not Config.NO_UPDATE,

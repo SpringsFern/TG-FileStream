@@ -33,12 +33,10 @@ parser = argparse.ArgumentParser(
 parser.add_argument("--host", help="Bind host")
 parser.add_argument("--port", type=int, help="Bind port")
 parser.add_argument("--public-url", help="Public base URL")
-parser.add_argument("--connection-limit", type=int,
-                    help="Max concurrent connections")
-parser.add_argument("--db-backend", type=str,
-                    help="Database server", choices=("mysql", "mongodb"))
-parser.add_argument("--no-update", action="store_false",
-                    help="Ignore Telegram Updates")
+parser.add_argument("--connection-limit", type=int, help="Max concurrent connections")
+parser.add_argument("--db-backend", help="Database server", choices=("mysql", "mongodb"))
+parser.add_argument("--no-update", action="store_false", help="Ignore Telegram Updates")
+parser.add_argument("--session", help="Name for current instance", default="")
 args = parser.parse_args()
 
 
@@ -74,11 +72,11 @@ class Config(ConfigBase):
     TOKENS: list[str] = ConfigBase.get_multi_client_tokens()
 
     # ---------- Server ----------
-    HOST: str = environ.get("HOST", "0.0.0.0")
+    HOST: str = args.host or environ.get("HOST", "0.0.0.0")
     PORT: int = args.port or ConfigBase.env_int("PORT", 8080)
-    PUBLIC_URL: str = environ.get("PUBLIC_URL", f"http://{HOST}:{PORT}")
+    PUBLIC_URL: str = args.public_url or environ.get("PUBLIC_URL", f"http://{HOST}:{PORT}")
 
-    CONNECTION_LIMIT: int = ConfigBase.env_int("CONNECTION_LIMIT", 5)
+    CONNECTION_LIMIT: int = args.connection_limit or ConfigBase.env_int("CONNECTION_LIMIT", 5)
 
     DEBUG: bool = ConfigBase.env_bool("DEBUG")
     EXT_DEBUG: bool = ConfigBase.env_bool("EXT_DEBUG")
@@ -88,7 +86,7 @@ class Config(ConfigBase):
     )
 
     # ---------- Bot behavior ----------
-    NO_UPDATE: bool = ConfigBase.env_bool("NO_UPDATE")
+    NO_UPDATE: bool = args.no_update or ConfigBase.env_bool("NO_UPDATE")
     SEQUENTIAL_UPDATES: bool = ConfigBase.env_bool("SEQUENTIAL_UPDATES")
     FILE_INDEX_LIMIT: int = ConfigBase.env_int("FILE_INDEX_LIMIT", 10)
     MAX_WARNS: int = ConfigBase.env_int("MAX_WARNS", 3)
@@ -107,15 +105,17 @@ class Config(ConfigBase):
         ALLOWED_IDS = ALLOWED_IDS | ADMIN_IDS
 
     # ---------- DB ----------
-    DB_BACKEND: str = environ.get("DB_BACKEND", "").lower()
+    DB_BACKEND: str = args.db_backend or environ.get("DB_BACKEND", "").lower()
 
     if DB_BACKEND in DB_LIST:
-        DB_CONFIG = ConfigBase.load_backend_config(*DB_LIST[DB_BACKEND])
+        DB_CONFIG: dict = ConfigBase.load_backend_config(*DB_LIST[DB_BACKEND])
     else:
         raise RuntimeError(
             f"Unsupported DB_BACKEND '{DB_BACKEND}'. "
             f"Valid options: {DB_LIST.keys()}"
         )
+    
+    SESSION_NAME: str = args.session
 
     # ---------- Security ----------
     SECRET: Optional[bytes] = None
