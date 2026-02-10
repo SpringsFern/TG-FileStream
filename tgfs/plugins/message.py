@@ -34,17 +34,17 @@ log = logging.getLogger(__name__)
 async def handle_start_command(evt: events.NewMessage.Event) -> None:
     msg: Message = evt.message
     user = await check_get_user(msg.sender_id, msg.id)
+    if not user: return
     lang = get_lang(user)
     await evt.reply(lang.START_TEXT)
-
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^/help", func=lambda x: x.is_private and not x.file))
 async def handle_help_command(evt: events.NewMessage.Event) -> None:
     msg: Message = evt.message
     user = await check_get_user(msg.sender_id, msg.id)
+    if not user: return
     lang = get_lang(user)
     await evt.reply(lang.HELP_TEXT)
-
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^(?!/).*", func=lambda x: x.is_private and not x.file))
 async def handle_text_message(evt: events.NewMessage.Event) -> None:
@@ -65,7 +65,6 @@ async def handle_text_message(evt: events.NewMessage.Event) -> None:
                 return
 
         await evt.reply(lang.UNKNOWN_COMMAND)
-
 
 async def handle_group_name(evt: events.NewMessage.Event, user: User) -> None:
     lang = get_lang(user)

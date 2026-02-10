@@ -39,6 +39,8 @@ async def update_location(source: FileSource, transfer: ParallelTransferrer) -> 
     return location
 
 async def check_get_user(user_id: int, msg_id, required: bool = True) -> Optional[User]:
+    if Config.ALLOWED_IDS and user_id not in Config.ALLOWED_IDS:
+        return None
     user = await DB.db.get_user(user_id)
     if required and user is None:
         await client.send_message(

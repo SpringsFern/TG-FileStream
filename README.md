@@ -81,6 +81,8 @@ python3 -m tgfs
 | `FILE_INDEX_LIMIT`   | `10`                   | Number of files to display at once with `/files` command                     |
 | `MAX_WARNS`          | `3`                    | Maximum number of warns before user get banned                               |
 | `ADMIN_IDS`          | `None`                 | User id of users who can use admin commands. Each id is seperated by `,`     |
+| `ALLOWED_IDS`        | `None`                 | Only users with these IDs can use the bot. Separate multiple IDs with `,`    |
+
 
 ### Multi Token Environment Variables
 | Variable       | Required/Default | Description                                                                  |
