@@ -35,7 +35,7 @@ parser.add_argument("--port", type=int, help="Bind port")
 parser.add_argument("--public-url", help="Public base URL")
 parser.add_argument("--connection-limit", type=int, help="Max concurrent connections")
 parser.add_argument("--db-backend", help="Database server", choices=("mysql", "mongodb"))
-parser.add_argument("--no-update", action="store_false", help="Ignore Telegram Updates")
+parser.add_argument("--no-update", action="store_true", help="Ignore Telegram Updates")
 parser.add_argument("--session", help="Name for current instance", default="")
 args = parser.parse_args()
 
@@ -87,6 +87,7 @@ class Config(ConfigBase):
 
     # ---------- Bot behavior ----------
     NO_UPDATE: bool = args.no_update or ConfigBase.env_bool("NO_UPDATE")
+    print(NO_UPDATE, args.no_update)
     SEQUENTIAL_UPDATES: bool = ConfigBase.env_bool("SEQUENTIAL_UPDATES")
     FILE_INDEX_LIMIT: int = ConfigBase.env_int("FILE_INDEX_LIMIT", 10)
     MAX_WARNS: int = ConfigBase.env_int("MAX_WARNS", 3)
