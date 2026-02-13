@@ -16,6 +16,7 @@ Available Commands:
 /done - Finish adding files to the group
 /files - List your uploaded files or created groups
 /setln - Change your language
+/cancel - Cancel the current operation
 """
 
     ACCEPTED_TOS_TEXT = "You have agreed to the Terms of Service."
@@ -33,6 +34,7 @@ Available Commands:
     FILE_LOCATION_NOT_FOUND = "File location not found."
     FILE_NOT_FOUND_TEXT = "File not found."
     GROUP_NOT_FOUND_TEXT = "Group not found."
+    OPERATION_CANCELED = "Current operation has been canceled"
 
     # ── File & Group Info ─────────────────────────────────────────
     FILES_TEXT = """You have created links for:
@@ -109,6 +111,7 @@ class kn(en):
 /done - ಗುಂಪಿಗೆ ಕಡತಗಳನ್ನು ಸೇರಿಸುವುದನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ
 /files - ನೀವು ಕಳುಹಿಸಿದ ಕಡತಗಳ ಮತ್ತು ರಚಿಸಿದ ಗುಂಪುಗಳ ಪಟ್ಟಿ
 /setln - ನಿಮ್ಮ ಭಾಷೆಯನ್ನು ಬದಲಾಯಿಸಲು
+/cancel - ಪ್ರಸ್ತುತ ಕಾರ್ಯಾಚರಣೆಯನ್ನು ರದ್ದುಗೊಳಿಸಲು
 """
 
     ACCEPTED_TOS_TEXT = "ನೀವು ಸೇವಾ ನಿಯಮಗಳಿಗೆ ಒಪ್ಪಿಗೆ ನೀಡಿದ್ದೀರಿ."

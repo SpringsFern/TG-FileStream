@@ -95,3 +95,15 @@ async def handle_setln_command(evt: events.NewMessage.Event) -> None:
         await evt.reply(lang.SETLN_SET_TO.format(ln_code=ln_code))
     else:
         await evt.reply(lang.SOMETHING_WENT_WRONG)
+
+@client.on(events.NewMessage(incoming=True, pattern=r"^/cancel", func=lambda x: x.is_private and not x.file))
+async def handle_cancel_command(evt: events.NewMessage.Event, user=None) -> None:
+    msg: Message = evt.message
+    user = user or await check_get_user(msg.sender_id, msg.id)
+    if user is None:
+        return
+    lang = get_lang(user)
+    user.curt_op=Status.NO_OP
+    user.op_id=0
+    await DB.db.upsert_user(user)
+    await evt.reply(lang.OPERATION_CANCELED)

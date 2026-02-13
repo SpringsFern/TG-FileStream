@@ -87,7 +87,6 @@ class Config(ConfigBase):
 
     # ---------- Bot behavior ----------
     NO_UPDATE: bool = args.no_update or ConfigBase.env_bool("NO_UPDATE")
-    print(NO_UPDATE, args.no_update)
     SEQUENTIAL_UPDATES: bool = ConfigBase.env_bool("SEQUENTIAL_UPDATES")
     FILE_INDEX_LIMIT: int = ConfigBase.env_int("FILE_INDEX_LIMIT", 10)
     MAX_WARNS: int = ConfigBase.env_int("MAX_WARNS", 3)
