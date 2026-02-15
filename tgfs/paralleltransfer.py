@@ -99,8 +99,8 @@ class DCConnectionManager:
             raise e
 
     async def _export_auth_key(self, conn: Connection) -> None:
-        self.log.info(f"Exporting auth to DC {self.dc.id}"
-                      f" (main client is in {self.client.session.dc_id})")
+        self.log.info("Exporting auth to DC %s"
+                      " (main client is in %s)", self.dc.id, self.client.session.dc_id)
         try:
             auth = await self.client(ExportAuthorizationRequest(self.dc.id))
         except DcIdInvalidError:

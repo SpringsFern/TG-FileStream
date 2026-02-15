@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import logging
 import traceback
 from aiohttp import web
 from telethon import functions
@@ -91,13 +90,45 @@ async def stop() -> None:
     await DB.close()
     log.info("Stopped Bot and Server")
 
+def log_pending_tasks(include_stack: bool = False):
+    log_child = log.getChild("tasks")
+    current = asyncio.current_task()
+    tasks = asyncio.all_tasks()
+
+    log_child.debug("Pending asyncio tasks")
+
+    for task in tasks:
+        if task is current:
+            continue
+
+        if task.done():
+            continue
+
+        log_child.debug(
+            "Task name=%s cancelled=%s coro=%s",
+            task.get_name(),
+            task.cancelled(),
+            task.get_coro(),
+        )
+
+        if include_stack:
+            stack = task.get_stack()
+            if stack:
+                log_child.debug("Stack for task %s:", task.get_name())
+                for frame in stack:
+                    formatted = "".join(traceback.format_stack(frame))
+                    log_child.debug("%s", formatted)
+            else:
+                log_child.debug("No stack available for %s", task.get_name())
+
 async def main() -> None:
     try:
         await start()
         await client.run_until_disconnected()
     finally:
+        log_pending_tasks(True)
         await stop()
-        logging.info("Stopped Services")
+        log.info("Stopped Services")
 
 if __name__ == "__main__":
     try:
@@ -105,4 +136,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
     except Exception:
-        logging.error(traceback.format_exc())
+        log.error(traceback.format_exc())

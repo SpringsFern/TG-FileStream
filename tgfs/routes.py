@@ -48,7 +48,7 @@ async def handle_file_request(req: web.Request, head: bool= None) -> web.Respons
         return web.Response(status=404, text="File not found")
     user_id, file_id = pt
     transfer: ParallelTransferrer = min(multi_clients, key=lambda c: c.users)
-    logging.debug("Using client %s", transfer.client_id)
+    log.debug("Using client %s", transfer.client_id)
 
     file = await DB.db.get_file(file_id, user_id)
     if not file:
