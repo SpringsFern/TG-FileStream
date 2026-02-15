@@ -120,6 +120,7 @@ async def handle_fileinfo_button(evt: events.CallbackQuery.Event):
         return
     token = make_token(user_id, file_info.id)
     url = f"{Config.PUBLIC_URL}/dl/{token}"
+    wt_url = f"{Config.PUBLIC_URL}/wt/{token}"
     await evt.edit(
         lang.FILE_INFO_TEXT.format(
             file_id=file_info.id,
@@ -131,7 +132,10 @@ async def handle_fileinfo_button(evt: events.CallbackQuery.Event):
             restricted=lang.YES if file_info.is_deleted else lang.NO
         ),
         buttons=[
-            [Button.url(lang.EXTERNAL_LINK, url)],
+            [
+                Button.url(lang.DOWNLOAD, url),
+                Button.url(lang.WATCH, wt_url),
+            ],
             [
                 Button.inline(
                     lang.DELETE, f"fileinfo_delconf2_{file_info.id}_{page_no}"),

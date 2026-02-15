@@ -93,6 +93,7 @@ Total Files: {total_files}"""
     OPEN = "Open"
 
     DOWNLOAD = "Download"
+    WATCH = "Watch"
     FILES = "Files"
     GROUPS = "Groups"
     AGREED = "Agreed"
@@ -187,6 +188,7 @@ class kn(en):
     OPEN = "ತೆರೆಯಿರಿ"
 
     DOWNLOAD = "ಡೌನ್‌ಲೋಡ್"
+    WATCH = "ವೀಕ್ಷಿಸಿ"
     FILES = "ಕಡತಗಳು"
     GROUPS = "ಗುಂಪುಗಳು"
     AGREED = "ಒಪ್ಪಿಗೆ"

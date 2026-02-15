@@ -38,8 +38,10 @@ async def handle_root(_: web.Request):
 
 # @routes.get(r"/{msg_id:-?\d+}/{name}")
 @routes.get("/dl/{payload}/{sig}")
+@routes.get("/wt/{payload}/{sig}")
 async def handle_file_request(req: web.Request, head: bool= None) -> web.Response:
-    if not head:
+    watch: bool = True if "wt" in req.path.split("/") else False
+    if head is None:
         head: bool = req.method == "HEAD"
     payload = req.match_info["payload"]
     sig = req.match_info["sig"]
@@ -76,13 +78,12 @@ async def handle_file_request(req: web.Request, head: bool= None) -> web.Respons
         "Content-Type": file.mime_type,
         "Content-Range": f"bytes {from_bytes}-{until_bytes}/{size}",
         "Content-Length": str(until_bytes - from_bytes + 1),
-        "Content-Disposition": f'attachment; filename="{file.file_name}"',
+        "Content-Disposition": f'{'inline' if watch else 'attachment'}; filename="{file.file_name}"',
         "Accept-Ranges": "bytes",
     })
 
 @routes.get("/group/{payload}/{sig}")
 async def handle_group_request(req: web.Request) -> web.Response:
-    head: bool = req.method == "HEAD"
     payload = req.match_info["payload"]
     sig = req.match_info["sig"]
     pt = parse_token(payload, sig)

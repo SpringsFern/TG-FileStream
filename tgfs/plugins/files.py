@@ -65,11 +65,15 @@ async def handle_file_message(evt: events.NewMessage.Event, msg=None) -> None:
     # fwd_msg: Message = await msg.forward_to(Config.BIN_CHANNEL)
     token = make_token(msg.sender_id, file_info.id)
     url = f"{Config.PUBLIC_URL}/dl/{token}"
+    wt_url = f"{Config.PUBLIC_URL}/wt/{token}"
     try:
         await evt.reply(
             url,
             buttons=[
-                [Button.url(lang.DOWNLOAD, url)],
+                [
+                    Button.url(lang.DOWNLOAD, url),
+                    Button.url(lang.WATCH, wt_url)
+                ],
             ]
         )
     except ButtonUrlInvalidError as e:

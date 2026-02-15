@@ -17,16 +17,19 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from os import environ
 from typing import Optional
 
 from tgfs.utils.config_utils import ConfigBase
 
+log = logging.getLogger(__name__)
+
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
-    print("Warning: python-dotenv not installed. Skipping .env loading.")
+    log.warning("python-dotenv not installed. Skipping .env loading.")
 
 parser = argparse.ArgumentParser(
     prog="tg-filestream", description="TG-FileStream server",)
