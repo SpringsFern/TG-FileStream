@@ -25,6 +25,8 @@ class BaseStorage(ABC):
     Abstract base class for storage backends.
     """
 
+    is_connected: bool
+
     @abstractmethod
     async def connect(self, **kwargs) -> None:
         """
@@ -36,7 +38,7 @@ class BaseStorage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def close(self) -> None:
+    async def close(self, force: bool = False) -> None:
         """
         Close all open connections and release resources.
 

@@ -24,6 +24,7 @@ from .user import UserDB
 from .utils import UtilDB
 
 class MongoDB(FileDB, GroupDB, UserDB, UtilDB, BaseStorage):
+    is_connected: bool = False
     client: AsyncIOMotorClient
     db: AsyncIOMotorDatabase
     files: AsyncIOMotorCollection
@@ -32,7 +33,9 @@ class MongoDB(FileDB, GroupDB, UserDB, UtilDB, BaseStorage):
     config: AsyncIOMotorCollection
 
     async def connect(self, uri: str, dbname) -> None:
-        self.client = AsyncIOMotorClient(uri)
+        if not self.is_connected:
+            self.client = AsyncIOMotorClient(uri)
+            self.is_connected = True
         self.db = self.client[dbname]
 
         self.files  = self.db.files
@@ -40,8 +43,10 @@ class MongoDB(FileDB, GroupDB, UserDB, UtilDB, BaseStorage):
         self.users  = self.db.users
         self.config = self.db.app_config
 
-    async def close(self) -> None:
-        self.client.close()
+    async def close(self, force: bool = False) -> None:
+        if self.is_connected or force:
+            self.client.close()
+            self.is_connected = False
 
     async def init_db(self) -> None:
         await self._create_indexes()

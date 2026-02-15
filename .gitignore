@@ -4,4 +4,6 @@
 test.py
 __pycache__
 
-tgfs/patches/*.py
+tgfs/patches/*
+!tgfs/patches/__init__.py
+!tgfs/patches/README.md

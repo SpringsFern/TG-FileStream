@@ -14,12 +14,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import base64
 import hashlib
 import hmac
 import struct
 import time
+import importlib.util
 from typing import Optional, cast
+from pathlib import Path
 
 from telethon import Button
 from telethon.utils import get_input_location
@@ -101,3 +104,39 @@ def human_time(seconds: int):
 
 def uptime_human():
     return human_time(int(time.monotonic() - START_TIME))
+
+def load_patches(patches_path: str):
+    patches_path = Path(patches_path).resolve()
+
+    loaded_files = set()
+
+    for item in patches_path.iterdir():
+        if item.is_file() and item.suffix == ".py":
+            load_file(item, patches_path, loaded_files)
+
+        elif item.is_dir():
+
+            init_file = item / "__init__.py"
+
+            if init_file.exists():
+                load_file(init_file, patches_path, loaded_files)
+
+            else:
+                for file in item.rglob("*.py"):
+                    load_file(file, patches_path, loaded_files)
+
+
+def load_file(file: Path, base: Path, loaded: set):
+    if file in loaded:
+        return
+
+    module_name = "patches_" + "_".join(
+        file.relative_to(base).with_suffix("").parts
+    )
+
+    spec = importlib.util.spec_from_file_location(module_name, file)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+
+    loaded.add(file)

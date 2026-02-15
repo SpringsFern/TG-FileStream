@@ -42,19 +42,24 @@ def read_sql_file(path: str) -> list[str]:
 
 class MySQLDB(FileDB, GroupDB, UserDB, UtilDB):
     _pool: aiomysql.Pool
+    is_connected: bool = False
 
     async def connect(self, *, host: str, port: int = 3306, user: str, password: str,
                           db: str, minsize: int = 1, maxsize: int = 10, autocommit: bool = False,
                           connect_timeout: int = 10) -> None:
-        self._pool = await aiomysql.create_pool(
-            host=host, port=port, user=user, password=password, db=db,
-            minsize=minsize, maxsize=maxsize, autocommit=autocommit,
-            connect_timeout=connect_timeout, charset="utf8mb4"
-        )
+        if not self.is_connected:
+            self._pool = await aiomysql.create_pool(
+                host=host, port=port, user=user, password=password, db=db,
+                minsize=minsize, maxsize=maxsize, autocommit=autocommit,
+                connect_timeout=connect_timeout, charset="utf8mb4"
+            )
+            self.is_connected = True
 
-    async def close(self) -> None:
-        self._pool.close()
-        await self._pool.wait_closed()
+    async def close(self, force: bool = False) -> None:
+        if self.is_connected or force:
+            self._pool.close()
+            await self._pool.wait_closed()
+            self.is_connected = False
 
     async def init_db(self) -> None:
         statements = read_sql_file("tgfs/database/mysql/schema.sql")

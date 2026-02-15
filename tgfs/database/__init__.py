@@ -30,10 +30,11 @@ class DB:
 
     @classmethod
     async def init(cls) -> None:
-        backend = Config.DB_BACKEND
-        db_cls = _BACKENDS[backend]
+        if cls.db is None:
+            backend = Config.DB_BACKEND
+            db_cls = _BACKENDS[backend]
+            cls.db = db_cls()
 
-        cls.db = db_cls()
         await cls.db.connect(**Config.DB_CONFIG)
         await cls.db.init_db()
 
