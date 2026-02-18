@@ -112,45 +112,51 @@ async def handle_done_command(evt: events.NewMessage.Event, user=None) -> None:
         max_id = msg.id
         order = 0
         group_id = await DB.db.create_group(user.user_id, str(msg.id))
-        file_msgs: list[Message] = await client.get_messages(
-            entity=msg.chat_id,
-            ids=range(min_id, max_id),
-        )
-        file_msgs = list(filter(lambda m: m.file, file_msgs))
-        if not file_msgs:
-            await DB.db.delete_group(group_id, user.user_id)
-            await evt.reply(lang.GROUP_NOFILES_TEXT)
-            user.curt_op = Status.NO_OP
-            user.op_id = 0
+        try:
+            file_msgs: list[Message] = await client.get_messages(
+                entity=msg.chat_id,
+                ids=range(min_id, max_id),
+            )
+            for m in file_msgs:
+                print(m)
+            file_msgs = list(filter(lambda m: m and m.file, file_msgs))
+            if not file_msgs:
+                await DB.db.delete_group(group_id, user.user_id)
+                await evt.reply(lang.GROUP_NOFILES_TEXT)
+                user.curt_op = Status.NO_OP
+                user.op_id = 0
+                await DB.db.upsert_user(user)
+                return
+            for file_msg in file_msgs:
+                dc_id, location = cast(
+                    tuple[int, InputTypeLocation], get_input_location(file_msg.media))
+                file_info = FileInfo(
+                    id=location.id,
+                    dc_id=dc_id,
+                    file_size=file_msg.file.size,
+                    mime_type=file_msg.file.mime_type,
+                    file_name=file_msg.file.name or f"{location.id}{file_msg.file.ext or ''}",
+                    thumb_size=location.thumb_size,
+                    is_deleted=False
+                )
+                file_source = FileSource(
+                    chat_id=file_msg.chat_id,
+                    message_id=file_msg.id
+                )
+                await DB.db.add_file(user.user_id, file_info, file_source)
+                await DB.db.upsert_location(
+                    multi_clients[0].client_id,
+                    location
+                )
+                order += 1
+                await DB.db.add_file_to_group(group_id, user.user_id, file_info.id, order)
+            await evt.reply(lang.GROUP_NAME_TEXT)
+            user.curt_op = Status.GROUP_NAME
+            user.op_id = group_id
             await DB.db.upsert_user(user)
-            return
-        for file_msg in file_msgs:
-            dc_id, location = cast(
-                tuple[int, InputTypeLocation], get_input_location(file_msg.media))
-            file_info = FileInfo(
-                id=location.id,
-                dc_id=dc_id,
-                file_size=file_msg.file.size,
-                mime_type=file_msg.file.mime_type,
-                file_name=file_msg.file.name or f"{location.id}{file_msg.file.ext or ''}",
-                thumb_size=location.thumb_size,
-                is_deleted=False
-            )
-            file_source = FileSource(
-                chat_id=file_msg.chat_id,
-                message_id=file_msg.id
-            )
-            await DB.db.add_file(user.user_id, file_info, file_source)
-            await DB.db.upsert_location(
-                multi_clients[0].client_id,
-                location
-            )
-            order += 1
-            await DB.db.add_file_to_group(group_id, user.user_id, file_info.id, order)
-        await evt.reply(lang.GROUP_NAME_TEXT)
-        user.curt_op = Status.GROUP_NAME
-        user.op_id = group_id
-        await DB.db.upsert_user(user)
+        except Exception as e:
+            DB.db.delete_group(group_id, user.user_id)
+            log.error(e, exc_info=True, stack_info=True)
     else:
         await evt.reply(lang.UNKNOWN_COMMAND)
 

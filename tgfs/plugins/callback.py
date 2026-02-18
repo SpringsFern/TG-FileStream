@@ -50,14 +50,12 @@ async def handle_list_page(evt: events.CallbackQuery.Event) -> None:
     kind = evt.pattern_match.group(1).decode()
     page_no = int(evt.pattern_match.group(2))
     is_group = kind == "groupinfo"
-
     user_id = evt.sender_id
-    label = "group" if is_group else "file"
 
     total_items = (await DB.db.total_groups(user_id)
                    if is_group else await DB.db.total_files(user_id))
     if total_items == 0:
-        await evt.edit(lang.NO_LABEL_LINKS_TEXT.format(label=label))
+        await evt.edit(lang.NO_LABEL_LINKS_TEXT.format(label=lang.GROUP if is_group else lang.FILE))
         return
 
     limit = Config.FILE_INDEX_LIMIT
@@ -78,11 +76,11 @@ async def handle_list_page(evt: events.CallbackQuery.Event) -> None:
 
     async for item_id, name in items_gen:
         buttons.append([
-            Button.inline(name, data=f"{label}info_file_{item_id}_{page_no}")
+            Button.inline(name, data=f"{kind}_file_{item_id}_{page_no}")
         ])
 
     if not buttons:
-        await evt.edit(lang.NO_LABELS_TEXT.format(label=label))
+        await evt.edit(lang.NO_LABELS_TEXT.format(label=lang.GROUPS if is_group else lang.FILES))
         return
 
     nav = []
@@ -102,7 +100,7 @@ async def handle_list_page(evt: events.CallbackQuery.Event) -> None:
     buttons.append([Button.inline(lang.BACK_TEXT, b"files_menu")])
 
     await evt.edit(
-        lang.TOTAL_LABEL_COUNT.format(total=total_items, label=label),
+        lang.TOTAL_LABEL_COUNT.format(total=total_items, label=lang.GROUP if is_group else lang.FILE),
         buttons=buttons
     )
 
@@ -167,7 +165,12 @@ async def handle_groupinfo_button(evt: events.CallbackQuery.Event):
             buttons.append(
                 [Button.inline(str(file_id), f"fileinfo_file_{file_id}_0")])
     buttons.append(
-        [Button.inline(lang.BACK_TEXT, f"groupinfo_page_{page_no}")])
+        [
+            Button.inline(lang.BACK_TEXT, f"groupinfo_page_{page_no}"),
+            Button.inline(lang.DELETE, f"groupinfo_delconf2_{file_info.group_id}_{page_no}")
+        ]
+    )
+
     await evt.edit(
         lang.GROUP_INFO_TEXT.format(
             name=file_info.name,
@@ -194,41 +197,50 @@ async def handle_fileinfo_get_button(evt: events.CallbackQuery.Event):
     await client.send_file(user_id, input_media, caption=file_info.file_name)
 
 
-@client.on(events.CallbackQuery(pattern=r"^fileinfo_delconf2_(\d+)_(\d+)$"))
+@client.on(events.CallbackQuery(pattern=r"^(fileinfo|groupinfo)_delconf2_(\d+)_(\d+)$"))
 async def handle_fileinfo_del_conf_button(evt: events.CallbackQuery.Event):
     user = await check_get_user(evt.sender_id, evt.message_id)
     lang = get_lang(user)
-    file_id = int(evt.pattern_match.group(1))
-    page_no = int(evt.pattern_match.group(2))
+    kind = evt.pattern_match.group(1).decode()
+    file_id = int(evt.pattern_match.group(2))
+    page_no = int(evt.pattern_match.group(3))
     user_id = evt.sender_id
-    file_info = await DB.db.get_file(file_id, user_id)
+    is_group = kind == "groupinfo"
+
+    file_info = await DB.db.get_group(file_id, user_id) if is_group else await DB.db.get_file(file_id, user_id)
     if file_info is None:
-        await evt.answer(lang.FILE_NOT_FOUND_TEXT, alert=True)
+        await evt.answer(lang.GROUP_NOT_FOUND_TEXT if is_group else lang.FILE_NOT_FOUND_TEXT, alert=True)
         return
     await evt.edit(
-        lang.CONFIRM_DELETE_TEXT,
+        lang.CONFIRM_DELETE_TEXT.format(label=lang.GROUP if is_group else lang.FILE),
         buttons=[
             [Button.inline(lang.YES+' '+lang.DELETE,
-                           f"fileinfo_delete_{file_id}_{page_no}")],
-            [Button.inline(lang.NO, f"fileinfo_file_{file_id}_{page_no}")]
+                           f"{kind}_delete_{file_id}_{page_no}")],
+            [Button.inline(lang.NO, f"{kind}_file_{file_id}_{page_no}")]
         ]
     )
 
 
-@client.on(events.CallbackQuery(pattern=r"^fileinfo_delete_(\d+)_(\d+)$"))
+@client.on(events.CallbackQuery(pattern=r"^(fileinfo|groupinfo)_delete_(\d+)_(\d+)$"))
 async def handle_fileinfo_del_button(evt: events.CallbackQuery.Event):
     user = await check_get_user(evt.sender_id, evt.message_id)
     lang = get_lang(user)
-    file_id = int(evt.pattern_match.group(1))
-    page_no = int(evt.pattern_match.group(2))
+    kind = evt.pattern_match.group(1).decode()
+    file_id = int(evt.pattern_match.group(2))
+    page_no = int(evt.pattern_match.group(3))
     user_id = evt.sender_id
-    file_info = await DB.db.get_file(file_id, user_id)
+    is_group = kind == "groupinfo"
+
+    file_info = await DB.db.get_group(file_id, user_id) if is_group else await DB.db.get_file(file_id, user_id)
     if file_info is None:
-        await evt.answer(lang.FILE_NOT_FOUND_TEXT, alert=True)
+        await evt.answer(lang.GROUP_NOT_FOUND_TEXT if is_group else lang.FILE_NOT_FOUND_TEXT, alert=True)
         return
-    await DB.db.remove_file(file_id, user_id)
-    await evt.edit(lang.FILE_DELETED_SUCCESSFULLY, buttons=[
-        [Button.inline(lang.BACK_TEXT, f"fileinfo_page_{page_no}")]
+    if is_group:
+        await DB.db.delete_group(file_id, user_id)
+    else:
+        await DB.db.remove_file(file_id, user_id)
+    await evt.edit(lang.DELETED_SUCCESSFULLY_TEXT.format(label=lang.GROUP if is_group else lang.FILE), buttons=[
+        [Button.inline(lang.BACK_TEXT, f"{kind}_page_{page_no}")]
     ])
 
 
