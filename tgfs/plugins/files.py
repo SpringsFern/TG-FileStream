@@ -117,8 +117,6 @@ async def handle_done_command(evt: events.NewMessage.Event, user=None) -> None:
                 entity=msg.chat_id,
                 ids=range(min_id, max_id),
             )
-            for m in file_msgs:
-                print(m)
             file_msgs = list(filter(lambda m: m and m.file, file_msgs))
             if not file_msgs:
                 await DB.db.delete_group(group_id, user.user_id)

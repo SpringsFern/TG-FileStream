@@ -100,17 +100,20 @@ async def handle_list_page(evt: events.CallbackQuery.Event) -> None:
     buttons.append([Button.inline(lang.BACK_TEXT, b"files_menu")])
 
     await evt.edit(
-        lang.TOTAL_LABEL_COUNT.format(total=total_items, label=lang.GROUP if is_group else lang.FILE),
+        lang.TOTAL_LABEL_COUNT.format(
+            total=total_items, label=lang.GROUP if is_group else lang.FILE),
         buttons=buttons
     )
 
 
-@client.on(events.CallbackQuery(pattern=r"^fileinfo_file_(\d+)_(\d+)$"))
+@client.on(events.CallbackQuery(pattern=r"^fileinfo_file_(\d+)_(\d+)(?:_(\d+))?$"))
 async def handle_fileinfo_button(evt: events.CallbackQuery.Event):
     user = await check_get_user(evt.sender_id, evt.message_id)
     lang = get_lang(user)
     file_id = int(evt.pattern_match.group(1))
     page_no = int(evt.pattern_match.group(2))
+    group_id = int(evt.pattern_match.group(
+        3)) if evt.pattern_match.group(3) else None
     user_id = evt.sender_id
     file_info = await DB.db.get_file(file_id, user_id)
     if file_info is None:
@@ -136,11 +139,15 @@ async def handle_fileinfo_button(evt: events.CallbackQuery.Event):
             ],
             [
                 Button.inline(
-                    lang.DELETE, f"fileinfo_delconf2_{file_info.id}_{page_no}"),
+                    lang.DELETE, (
+                        f"fileinfo_delconf2_{file_info.id}_{page_no}"
+                        f"{f'_{group_id}' if group_id else ''}"
+                    )),
                 Button.inline(lang.GET_FILE_TEXT,
                               f"fileinfo_get_{file_info.id}")
             ],
-            [Button.inline(lang.BACK_TEXT, f"fileinfo_page_{page_no}")]
+            [Button.inline(
+                lang.BACK_TEXT, f"groupinfo_file_{group_id}_{page_no}" if group_id else f"fileinfo_page_{page_no}")]
         ]
     )
 
@@ -149,10 +156,10 @@ async def handle_fileinfo_button(evt: events.CallbackQuery.Event):
 async def handle_groupinfo_button(evt: events.CallbackQuery.Event):
     user = await check_get_user(evt.sender_id, evt.message_id)
     lang = get_lang(user)
-    file_id = int(evt.pattern_match.group(1))
+    group_id = int(evt.pattern_match.group(1))
     page_no = int(evt.pattern_match.group(2))
     user_id = evt.sender_id
-    file_info = await DB.db.get_group(file_id, user_id)
+    file_info = await DB.db.get_group(group_id, user_id)
     if file_info is None:
         await evt.answer(lang.GROUP_NOT_FOUND_TEXT, alert=True)
         return
@@ -163,11 +170,12 @@ async def handle_groupinfo_button(evt: events.CallbackQuery.Event):
     if file_info.files and len(file_info.files) <= 98:
         for file_id in file_info.files:
             buttons.append(
-                [Button.inline(str(file_id), f"fileinfo_file_{file_id}_0")])
+                [Button.inline(str(file_id), f"fileinfo_file_{file_id}_{page_no}_{group_id}")])
     buttons.append(
         [
             Button.inline(lang.BACK_TEXT, f"groupinfo_page_{page_no}"),
-            Button.inline(lang.DELETE, f"groupinfo_delconf2_{file_info.group_id}_{page_no}")
+            Button.inline(
+                lang.DELETE, f"groupinfo_delconf2_{file_info.group_id}_{page_no}")
         ]
     )
 
@@ -197,13 +205,15 @@ async def handle_fileinfo_get_button(evt: events.CallbackQuery.Event):
     await client.send_file(user_id, input_media, caption=file_info.file_name)
 
 
-@client.on(events.CallbackQuery(pattern=r"^(fileinfo|groupinfo)_delconf2_(\d+)_(\d+)$"))
+@client.on(events.CallbackQuery(pattern=r"^(fileinfo|groupinfo)_delconf2_(\d+)_(\d+)(?:_(\d+))?$"))
 async def handle_fileinfo_del_conf_button(evt: events.CallbackQuery.Event):
     user = await check_get_user(evt.sender_id, evt.message_id)
     lang = get_lang(user)
     kind = evt.pattern_match.group(1).decode()
     file_id = int(evt.pattern_match.group(2))
     page_no = int(evt.pattern_match.group(3))
+    group_id = int(evt.pattern_match.group(
+        4)) if evt.pattern_match.group(4) else None
     user_id = evt.sender_id
     is_group = kind == "groupinfo"
 
@@ -212,22 +222,30 @@ async def handle_fileinfo_del_conf_button(evt: events.CallbackQuery.Event):
         await evt.answer(lang.GROUP_NOT_FOUND_TEXT if is_group else lang.FILE_NOT_FOUND_TEXT, alert=True)
         return
     await evt.edit(
-        lang.CONFIRM_DELETE_TEXT.format(label=lang.GROUP if is_group else lang.FILE),
+        lang.CONFIRM_DELETE_TEXT.format(
+            label=lang.GROUP if is_group else lang.FILE),
         buttons=[
-            [Button.inline(lang.YES+' '+lang.DELETE,
-                           f"{kind}_delete_{file_id}_{page_no}")],
-            [Button.inline(lang.NO, f"{kind}_file_{file_id}_{page_no}")]
+            [Button.inline(lang.YES+' '+lang.DELETE, (
+                f"{kind}_delete_{file_id}_{page_no}"
+                f"{f'_{group_id}' if group_id else ''}"
+            ))],
+            [Button.inline(lang.NO, (
+                f"{kind}_file_{file_id}_{page_no}"
+                f"{f'_{group_id}' if group_id else ''}"
+            ))]
         ]
     )
 
 
-@client.on(events.CallbackQuery(pattern=r"^(fileinfo|groupinfo)_delete_(\d+)_(\d+)$"))
+@client.on(events.CallbackQuery(pattern=r"^(fileinfo|groupinfo)_delete_(\d+)_(\d+)(?:_(\d+))?$"))
 async def handle_fileinfo_del_button(evt: events.CallbackQuery.Event):
     user = await check_get_user(evt.sender_id, evt.message_id)
     lang = get_lang(user)
     kind = evt.pattern_match.group(1).decode()
     file_id = int(evt.pattern_match.group(2))
     page_no = int(evt.pattern_match.group(3))
+    group_id = int(evt.pattern_match.group(
+        4)) if evt.pattern_match.group(4) else None
     user_id = evt.sender_id
     is_group = kind == "groupinfo"
 
@@ -240,7 +258,11 @@ async def handle_fileinfo_del_button(evt: events.CallbackQuery.Event):
     else:
         await DB.db.remove_file(file_id, user_id)
     await evt.edit(lang.DELETED_SUCCESSFULLY_TEXT.format(label=lang.GROUP if is_group else lang.FILE), buttons=[
-        [Button.inline(lang.BACK_TEXT, f"{kind}_page_{page_no}")]
+        [
+            Button.inline(lang.BACK_TEXT, (
+                f"groupinfo_file_{group_id}_{page_no}" if group_id else f"{kind}_page_{page_no}"
+        ))
+        ]
     ])
 
 
