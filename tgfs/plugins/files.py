@@ -111,7 +111,7 @@ async def handle_done_command(evt: events.NewMessage.Event, user=None) -> None:
         min_id = user.op_id+1
         max_id = msg.id
         order = 0
-        group_id = await DB.db.create_group(user.user_id, msg.id)
+        group_id = await DB.db.create_group(user.user_id, str(msg.id))
         file_msgs: list[Message] = await client.get_messages(
             entity=msg.chat_id,
             ids=range(min_id, max_id),
@@ -153,7 +153,6 @@ async def handle_done_command(evt: events.NewMessage.Event, user=None) -> None:
         await DB.db.upsert_user(user)
     else:
         await evt.reply(lang.UNKNOWN_COMMAND)
-
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^/files", func=lambda x: x.is_private and not x.file))
 async def handle_myfiles_command(evt: events.NewMessage.Event) -> None:

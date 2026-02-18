@@ -17,6 +17,7 @@
 from typing import AsyncGenerator, Optional
 from datetime import datetime, timezone
 
+from pymongo import ReturnDocument
 from motor.motor_asyncio import AsyncIOMotorCollection
 
 from tgfs.database.database import BaseStorage
@@ -24,6 +25,27 @@ from tgfs.utils.types import GroupInfo
 
 class GroupDB(BaseStorage):
     groups: AsyncIOMotorCollection
+    config: AsyncIOMotorCollection
+
+    async def group_counter(self) -> int:
+        """
+        Generate the next sequential group ID using atomic MongoDB counter pattern.
+
+        Uses atomic find_one_and_update operation to increment a counter document
+        in the config collection. If the counter doesn't exist, it's created with
+        initial value 1 (upsert=True).
+
+        Returns:
+            int: Next group ID (incrementing sequence starting from 1)
+        """
+        result = await self.config.find_one_and_update(
+            {"_id": "group.counter"},
+            {"$inc": {"value": 1}},
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        return result["value"]
+
     async def create_group(self, user_id: int, name: str) -> int:
         group_id = await self.group_counter()
         await self.groups.insert_one({

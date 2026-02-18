@@ -18,10 +18,9 @@ import os
 
 from motor.motor_asyncio import AsyncIOMotorCollection
 from bson.binary import Binary
-from pymongo import ReturnDocument
 
 from tgfs.database.database import BaseStorage
-from tgfs.utils.types import SUPPORTED_TYPE
+
 
 class UtilDB(BaseStorage):
     config: AsyncIOMotorCollection
@@ -40,7 +39,7 @@ class UtilDB(BaseStorage):
         )
 
         return secret
-    
+
     async def get_config_value(self, key: str):
         doc = await self.config.find_one({"_id": key})
         return doc["value"] if doc else None
@@ -51,12 +50,3 @@ class UtilDB(BaseStorage):
             {"$set": {"value": value}},
             upsert=True,
         )
-
-    async def group_counter(self) -> int:
-        result = await self.config.find_one_and_update(
-            {"_id": "group.counter"},
-            {"$inc": {"value": 1}},
-            upsert=True,
-            return_document=ReturnDocument.AFTER,
-        )
-        return result["value"]
