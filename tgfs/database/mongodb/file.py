@@ -26,6 +26,7 @@ from tgfs.utils.types import FileInfo, FileSource, InputTypeLocation
 
 class FileDB(BaseStorage):
     files: AsyncIOMotorCollection
+    groups: AsyncIOMotorCollection
     async def add_file(self, user_id: int, file: FileInfo, source: FileSource) -> None:
         await self.files.update_one(
             {"_id": file.id},
@@ -152,11 +153,25 @@ class FileDB(BaseStorage):
         res = await self.files.delete_one({"_id": file_id})
         return res.deleted_count > 0
 
+    async def _delete_file_from_group(self, user_id: int, file_id: int,) -> None:
+        await self.groups.update_one(
+            {
+                "user_id": user_id,
+                f"files.{file_id}": {"$exists": True},
+            },
+            {
+                "$unset": {
+                    f"files.{file_id}": ""
+                }
+            },
+        )
+
     async def remove_file(self, file_id: int, user_id: int) -> bool:
         res = await self.files.update_one(
             {"_id": file_id},
             {"$unset": {f"users.{user_id}": ""}},
         )
+        await self._delete_file_from_group(user_id, file_id)
         return res.modified_count > 0
 
     async def get_file_old(self, file_id: str, user_id: int = None) -> Optional[dict[str, Union[ObjectId, int]]]:
