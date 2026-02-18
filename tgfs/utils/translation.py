@@ -47,7 +47,7 @@ Select the type of links you want to view.
     FILE_INFO_TEXT = """File Info:
 ID: {file_id}
 DC ID: {dc_id}
-Size: {file_size} bytes
+Size: {file_size}
 MIME Type: {mime_type}
 File Name: {file_name}
 File Type: {file_type}
@@ -144,7 +144,7 @@ class kn(en):
     FILE_INFO_TEXT = """ಫೈಲ್ ಮಾಹಿತಿ:
 ಕಡತದ ಐಡಿ: {file_id}
 ಡಿಸಿ ಐಡಿ: {dc_id}
-ಗಾತ್ರ: {file_size} ಬೈಟ್‌ಗಳು
+ಗಾತ್ರ: {file_size}
 ಮೈಮ್ ಪ್ರಕಾರ: {mime_type}
 ಕಡತದ ಹೆಸರು: {file_name}
 ಕಡತದ ಪ್ರಕಾರ: {file_type}

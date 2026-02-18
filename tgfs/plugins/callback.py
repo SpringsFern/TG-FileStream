@@ -23,7 +23,7 @@ from tgfs.config import Config
 from tgfs.telegram import client
 from tgfs.database import DB
 from tgfs.utils.translation import get_lang
-from tgfs.utils.utils import check_get_user, make_token
+from tgfs.utils.utils import check_get_user, human_bytes, make_token
 
 log = logging.getLogger(__name__)
 
@@ -126,7 +126,7 @@ async def handle_fileinfo_button(evt: events.CallbackQuery.Event):
         lang.FILE_INFO_TEXT.format(
             file_id=file_info.id,
             dc_id=file_info.dc_id,
-            file_size=file_info.file_size,
+            file_size=human_bytes(file_info.file_size),
             mime_type=file_info.mime_type,
             file_name=file_info.file_name,
             file_type=lang.PHOTO if file_info.thumb_size else lang.DOCUMENT,
@@ -168,9 +168,9 @@ async def handle_groupinfo_button(evt: events.CallbackQuery.Event):
         [Button.url(lang.EXTERNAL_LINK, f"{Config.PUBLIC_URL}/group/{token}")]
     ]
     if file_info.files and len(file_info.files) <= 98:
-        for file_id in file_info.files:
+        async for file_id, name in DB.db.get_files2(user_id, file_info.files):
             buttons.append(
-                [Button.inline(str(file_id), f"fileinfo_file_{file_id}_{page_no}_{group_id}")])
+                [Button.inline(name, f"fileinfo_file_{file_id}_{page_no}_{group_id}")])
     buttons.append(
         [
             Button.inline(lang.BACK_TEXT, f"groupinfo_page_{page_no}"),

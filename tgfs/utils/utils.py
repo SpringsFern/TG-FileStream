@@ -105,6 +105,16 @@ def human_time(seconds: int):
 def uptime_human():
     return human_time(int(time.monotonic() - START_TIME))
 
+def human_bytes(size: int) -> str:
+    if size == 0:
+        return "0 B"
+    units = ["B", "KB", "MB", "GB", "TB", "PB", "EB"]
+    i = 0
+    while size >= 1024 and i < len(units) - 1:
+        size /= 1024
+        i += 1
+    return f"{size:.2f} {units[i]}"
+
 def load_patches(patches_path: str):
     patches_path = Path(patches_path).resolve()
 

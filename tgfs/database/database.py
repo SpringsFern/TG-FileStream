@@ -81,6 +81,11 @@ class BaseStorage(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def get_files2(self, user_id: int, file_ids: list[int], full: bool = False
+                        ) -> AsyncGenerator[tuple[int, str], None]:
+        raise NotImplementedError
+
+    @abstractmethod
     async def get_file_users(self, file_id: int, ) -> set[int]:
         raise NotImplementedError
 

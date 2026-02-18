@@ -221,6 +221,44 @@ class FileDB(BaseStorage):
                     file_id, file_name = row
                     yield int(file_id), str(file_name)
 
+    async def get_files2(self,user_id: int,file_ids: list[int],full: bool = False,
+    ) -> AsyncGenerator[dict | tuple[int, str], None]:
+
+        if not file_ids:
+            return
+
+        placeholders = ",".join(["%s"] * len(file_ids))
+
+        if full:
+            select_clause = "f.*"
+        else:
+            select_clause = "f.id AS file_id, f.file_name"
+
+        base_sql = f"""
+            SELECT {select_clause}
+            FROM TGFILE f
+            JOIN USER_FILE uf ON f.id = uf.id
+            WHERE uf.user_id = %s
+              AND f.id IN ({placeholders})
+            ORDER BY uf.added_at DESC
+        """
+
+        params = [user_id] + file_ids
+
+        async with self._pool.acquire() as conn:
+            async with conn.cursor(aiomysql.SSCursor) as cur:
+                await cur.execute(base_sql, params)
+
+                if full:
+                    columns = [col[0] for col in cur.description]
+
+                    async for row in cur:
+                        yield dict(zip(columns, row))
+                else:
+                    async for row in cur:
+                        file_id, file_name = row
+                        yield int(file_id), str(file_name)
+
     async def get_file_users(self, file_id: int, ) -> set[int]:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:

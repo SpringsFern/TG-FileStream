@@ -134,6 +134,35 @@ class FileDB(BaseStorage):
         async for doc in cursor:
             yield doc["_id"], doc.get("file_name")
 
+    async def get_files2(
+        self, user_id: int, file_ids: list[int], full: bool = False,
+    ) -> AsyncGenerator[dict | tuple[int, str], None]:
+
+        if not file_ids:
+            return
+
+        projection = None
+        if not full:
+            projection = {
+                "file_name": 1,
+                f"users.{user_id}.added_at": 1,
+            }
+
+        cursor = self.files.find(
+            {
+                "_id": {"$in": file_ids},
+                f"users.{user_id}": {"$exists": True},
+            },
+            projection,
+        ).sort(f"users.{user_id}.added_at", -1)
+
+        if full:
+            async for doc in cursor:
+                yield doc
+        else:
+            async for doc in cursor:
+                yield doc["_id"], doc.get("file_name")
+
     async def get_file_users(self, file_id: int) -> set[int]:
         doc = await self.files.find_one(
             {"_id": file_id},
