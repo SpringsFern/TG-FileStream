@@ -118,36 +118,25 @@ def human_bytes(size: int) -> str:
 
 def load_patches(patches_path: str):
     patches_path = Path(patches_path).resolve()
+    if not patches_path.exists():
+        return
+    project_root = patches_path.parent.parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
 
-    loaded_files = set()
+    package_name = f"{patches_path.parent.name}.{patches_path.name}"
 
     for item in patches_path.iterdir():
         if item.is_file() and item.suffix == ".py":
-            load_file(item, patches_path, loaded_files)
-
+            module_name = f"{package_name}.{item.stem}"
+            importlib.import_module(module_name)
         elif item.is_dir():
-
-            init_file = item / "__init__.py"
-
-            if init_file.exists():
-                load_file(init_file, patches_path, loaded_files)
-
+            if (item / "__init__.py").exists():
+                module_name = f"{package_name}.{item.name}"
+                importlib.import_module(module_name)
             else:
                 for file in item.rglob("*.py"):
-                    load_file(file, patches_path, loaded_files)
-
-
-def load_file(file: Path, base: Path, loaded: set):
-    if file in loaded:
-        return
-
-    module_name = "patches_" + "_".join(
-        file.relative_to(base).with_suffix("").parts
-    )
-
-    spec = importlib.util.spec_from_file_location(module_name, file)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-
-    loaded.add(file)
+                    relative = file.relative_to(patches_path)
+                    module_parts = relative.with_suffix("").parts
+                    module_name = ".".join((package_name, *module_parts))
+                    importlib.import_module(module_name)
