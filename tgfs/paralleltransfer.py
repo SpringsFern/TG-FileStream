@@ -157,8 +157,8 @@ class ParallelTransferrer:
         self.client = client
         self.client_id = client_id
         self.users = 0
-        
-        self.dc_managers = defaultdict(lambda: None) 
+
+        self.dc_managers = defaultdict(lambda: None)
 
     def _get_dc_manager(self, dc_id: int) -> DCConnectionManager:
         if self.dc_managers[dc_id] is None:
@@ -211,7 +211,7 @@ class ParallelTransferrer:
         except (GeneratorExit, StopAsyncIteration, asyncio.CancelledError):
             log.info("Parallel download interrupted")
             raise
-        except Exception:
+        except Exception: # pylint: disable=W0718
             log.error("Parallel download errored", exc_info=True)
         finally:
             self.users -= 1

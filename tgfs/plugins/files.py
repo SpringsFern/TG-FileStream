@@ -152,7 +152,7 @@ async def handle_done_command(evt: events.NewMessage.Event, user=None) -> None:
             user.curt_op = Status.GROUP_NAME
             user.op_id = group_id
             await DB.db.upsert_user(user)
-        except Exception as e:
+        except Exception as e: # pylint: disable=W0718
             DB.db.delete_group(group_id, user.user_id)
             log.error(e, exc_info=True, stack_info=True)
     else:

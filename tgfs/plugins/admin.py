@@ -42,7 +42,11 @@ def parse_userid(token: str) -> Optional[int]:
 log = logging.getLogger(__name__)
 
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/help", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+@client.on(events.NewMessage(
+    incoming=True,
+    pattern=r"^/help",
+    func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)
+))
 async def handle_help_command(evt: events.NewMessage.Event) -> None:
     await evt.reply(f"""
 Admin Commands:
@@ -61,7 +65,11 @@ download url strcture: "http://<PUBLIC_URL>/dl/<token>/<signature>"
 """)
 
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/ban (\d+) (.+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+@client.on(events.NewMessage(
+    incoming=True,
+    pattern=r"^/ban (\d+) (.+)$",
+    func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)
+))
 async def handle_ban_command(evt: events.NewMessage.Event) -> None:
     user_id = int(evt.pattern_match.group(1))
     reason = str(evt.pattern_match.group(2))
@@ -76,7 +84,11 @@ async def handle_ban_command(evt: events.NewMessage.Event) -> None:
         await evt.reply(f"Unable to ban user {user_id}")
 
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/warn (\d+) (.+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+@client.on(events.NewMessage(
+    incoming=True,
+    pattern=r"^/warn (\d+) (.+)$",
+    func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)
+))
 async def handle_warn_command(evt: events.NewMessage.Event) -> None:
     user_id = int(evt.pattern_match.group(1))
     reason = str(evt.pattern_match.group(2))
@@ -94,7 +106,11 @@ async def handle_warn_command(evt: events.NewMessage.Event) -> None:
         await evt.reply(f"Unable to warn user {user_id}")
 
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/unban (\d+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+@client.on(events.NewMessage(
+    incoming=True,
+    pattern=r"^/unban (\d+)$",
+    func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)
+))
 async def handle_unban_command(evt: events.NewMessage.Event) -> None:
     user_id = int(evt.pattern_match.group(1))
     user = await DB.db.get_user(user_id)
@@ -109,7 +125,11 @@ async def handle_unban_command(evt: events.NewMessage.Event) -> None:
         await evt.reply(f"Unable to unban user {user_id}")
 
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/clearwarns (\d+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+@client.on(events.NewMessage(
+    incoming=True,
+    pattern=r"^/clearwarns (\d+)$",
+    func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)
+))
 async def handle_clearwarns_command(evt: events.NewMessage.Event) -> None:
     user_id = int(evt.pattern_match.group(1))
     user = await DB.db.get_user(user_id)
@@ -123,7 +143,11 @@ async def handle_clearwarns_command(evt: events.NewMessage.Event) -> None:
         await evt.reply(f"Unable to clear warns for user {user_id}")
 
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/listfiles (\d+|[A-Za-z0-9_\-:/]+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+@client.on(events.NewMessage(
+    incoming=True,
+    pattern=r"^/listfiles (\d+|[A-Za-z0-9_\-:/]+)$",
+    func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)
+))
 async def handle_listfiles_command(evt: events.NewMessage.Event) -> None:
     file_id = evt.pattern_match.group(1)
     if file_id.isdigit():
@@ -143,7 +167,11 @@ async def handle_listfiles_command(evt: events.NewMessage.Event) -> None:
     await evt.reply(reply_text)
 
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/restrictfile (\d+|[A-Za-z0-9_\-:/]+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+@client.on(events.NewMessage(
+    incoming=True,
+    pattern=r"^/restrictfile (\d+|[A-Za-z0-9_\-:/]+)$",
+    func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)
+))
 async def handle_restrictfile_command(evt: events.NewMessage.Event) -> None:
     file_id = evt.pattern_match.group(1)
     if file_id.isdigit():
@@ -161,7 +189,11 @@ async def handle_restrictfile_command(evt: events.NewMessage.Event) -> None:
     await evt.reply(f"Restricted File with File Id {file.id}")
 
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/deletefile (?:(\d+) (\d+)|([A-Za-z0-9_\-:/]+))$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+@client.on(events.NewMessage(
+    incoming=True,
+    pattern=r"^/deletefile (?:(\d+) (\d+)|([A-Za-z0-9_\-:/]+))$",
+    func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)
+))
 async def handle_deletefile_command(evt: events.NewMessage.Event) -> None:
     user_id = evt.pattern_match.group(1)
     file_id = evt.pattern_match.group(2)
@@ -181,7 +213,11 @@ async def handle_deletefile_command(evt: events.NewMessage.Event) -> None:
         await evt.reply(f"Unable to delete file {file_id} associated with user [{user_id}](tg://user?id={user_id})")
 
 
-@client.on(events.NewMessage(incoming=True, pattern=r"^/parsetoken ([A-Za-z0-9_\-:/]+)$", func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)))
+@client.on(events.NewMessage(
+    incoming=True,
+    pattern=r"^/parsetoken ([A-Za-z0-9_\-:/]+)$",
+    func=lambda x: x.is_private and not x.file and is_admin(x.sender_id)
+))
 async def handle_parsetoken_command(evt: events.NewMessage.Event) -> None:
     token = evt.pattern_match.group(1)
     data = parse_token(token)

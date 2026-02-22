@@ -117,7 +117,7 @@ class Config(ConfigBase):
             f"Unsupported DB_BACKEND '{DB_BACKEND}'. "
             f"Valid options: {DB_LIST.keys()}"
         )
-    
+
     SESSION_NAME: str = args.session
 
     # ---------- Security ----------

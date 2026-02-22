@@ -61,10 +61,10 @@ async def _start_client(token: str) -> Optional[ParallelTransferrer]:
         transfer = ParallelTransferrer(bot, me.user_id)
         transfer.post_init()
         return transfer
-    except Exception as e:
+    except Exception as e: # pylint: disable=W0718
         log.error("Faied to Start Client %s: %s", token.split(":")[0], e)
         return None
-    
+
 async def start_clients():
     tasks = (_start_client(t) for t in Config.TOKENS)
     results = await asyncio.gather(*tasks)

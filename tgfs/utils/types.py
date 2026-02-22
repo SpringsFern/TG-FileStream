@@ -25,7 +25,7 @@ from tgfs.config import Config
 
 InputTypeLocation = Union[types.InputDocumentFileLocation, types.InputPhotoFileLocation]
 InputMedia = Union[types.Document, types.Photo, types.PhotoEmpty, types.DocumentEmpty]
-SUPPORTED_TYPE = Union[bytes, bool, int, str, list, dict]
+SupportedType = Union[bytes, bool, int, str, list, dict]
 
 class Status(Enum):
     NO_OP=0
@@ -63,7 +63,7 @@ class User:
     @property
     def is_banned(self) -> bool:
         return self.ban_date is not None
-    
+
     @property
     def is_admin(self) -> bool:
         return self.user_id in Config.ADMIN_IDS
@@ -78,7 +78,7 @@ class User:
                 try:
                     s = val.decode() if isinstance(val, bytes) else val
                     return datetime.datetime.fromisoformat(s)
-                except Exception:
+                except Exception: # pylint: disable=W0718
                     return None
             return None
 
@@ -91,7 +91,7 @@ class User:
             curt_op = Status(row.get("curt_op")),
             op_id = int(row.get("op_id"))
         )
-    
+
 @dataclass
 class GroupInfo:
     group_id: int

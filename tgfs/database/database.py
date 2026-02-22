@@ -17,7 +17,7 @@
 from abc import ABC, abstractmethod
 from typing import AsyncGenerator, Optional
 
-from tgfs.utils.types import SUPPORTED_TYPE, FileInfo, FileSource, GroupInfo, InputTypeLocation, User
+from tgfs.utils.types import SupportedType, FileInfo, FileSource, GroupInfo, InputTypeLocation, User
 
 
 class BaseStorage(ABC):
@@ -162,9 +162,9 @@ class BaseStorage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_config_value(self, key: str) -> Optional[SUPPORTED_TYPE]:
+    async def get_config_value(self, key: str) -> Optional[SupportedType]:
         raise NotImplementedError
 
     @abstractmethod
-    async def set_config_value(self, key: str, value: SUPPORTED_TYPE) -> None:
+    async def set_config_value(self, key: str, value: SupportedType) -> None:
         raise NotImplementedError

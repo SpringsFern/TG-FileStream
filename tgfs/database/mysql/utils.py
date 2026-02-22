@@ -20,9 +20,9 @@ import json
 from typing import Optional
 
 from tgfs.database.database import BaseStorage
-from tgfs.utils.types import SUPPORTED_TYPE
+from tgfs.utils.types import SupportedType
 
-def encode_value(value: SUPPORTED_TYPE) -> tuple[bytes, str]:
+def encode_value(value: SupportedType) -> tuple[bytes, str]:
     if isinstance(value, bytes):
         return value, "bytes"
 
@@ -41,7 +41,7 @@ def encode_value(value: SUPPORTED_TYPE) -> tuple[bytes, str]:
 
     raise TypeError(f"Unsupported type: {type(value)}")
 
-def decode_value(data: bytes, vtype: str) -> SUPPORTED_TYPE:
+def decode_value(data: bytes, vtype: str) -> SupportedType:
     if vtype == "bytes":
         return data
 
@@ -87,7 +87,7 @@ class UtilDB(BaseStorage):
                 await conn.commit()
                 return secret
             
-    async def get_config_value(self, key: str) -> Optional[SUPPORTED_TYPE]:
+    async def get_config_value(self, key: str) -> Optional[SupportedType]:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
@@ -101,7 +101,7 @@ class UtilDB(BaseStorage):
                 data, vtype = row
                 return decode_value(data, vtype)
 
-    async def set_config_value(self, key: str, value: SUPPORTED_TYPE) -> None:
+    async def set_config_value(self, key: str, value: SupportedType) -> None:
         data, vtype = encode_value(value)
 
         async with self._pool.acquire() as conn:

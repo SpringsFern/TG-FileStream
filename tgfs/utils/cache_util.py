@@ -69,7 +69,8 @@ class AsyncLRUCache:
     def cache_clear(self) -> None:
         self.cache.clear()
 
-def lru_cache(maxsize: Optional[int] = 128, use_first_arg: bool = False) -> Callable[[Callable[..., Awaitable[Any]]], AsyncLRUCache]:
+def lru_cache(maxsize: Optional[int] = 128, use_first_arg: bool = False
+    ) -> Callable[[Callable[..., Awaitable[Any]]], AsyncLRUCache]:
     def decorator(fn: Callable[..., Awaitable[Any]]) -> AsyncLRUCache:
         return AsyncLRUCache(fn, maxsize, use_first_arg)
     return decorator

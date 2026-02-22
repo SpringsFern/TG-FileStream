@@ -37,7 +37,8 @@ from tgfs.database import DB
 START_TIME = time.monotonic()
 
 async def update_location(source: FileSource, transfer: ParallelTransferrer) -> InputTypeLocation:
-    message = cast(Message, await client.forward_messages(Config.BIN_CHANNEL, source.message_id, source.chat_id, drop_author=True))
+    message = cast(Message,await client.forward_messages(
+        Config.BIN_CHANNEL, source.message_id, source.chat_id, drop_author=True))
     msg = cast(Message, await transfer.client.get_messages(message.chat_id, ids=message.id))
     await message.delete()
     _, location = get_input_location(msg)
@@ -93,7 +94,7 @@ def parse_token(p_b64: str, s_b64: Optional[str] = None) -> tuple[int, int] | No
 
         user_id, file_id = struct.unpack(">QQ", payload)
         return user_id, file_id
-    except Exception:
+    except Exception: # pylint: disable=W0718
         return None
 
 def human_time(seconds: int):

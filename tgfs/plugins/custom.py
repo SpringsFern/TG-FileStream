@@ -71,6 +71,7 @@ async def handle_group_url(evt: events.NewMessage.Event, user: User, match: re.M
             await evt.reply(status)
     await evt.reply(lang.GROUP_ENDOF_FILES)
 
+# pylint: disable=C0301
 HANDLERS = [
     (re.compile(
         r"^(?P<scheme>https?):\/\/(?P<host>(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}|\d{1,3}(?:\.\d{1,3}){3})(?::(?P<port>\d{1,5}))?\/dl\/(?P<payload>[^\/]+)\/(?P<sig>[^\/]+)$"), handle_file_url),

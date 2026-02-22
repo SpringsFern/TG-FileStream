@@ -20,19 +20,18 @@ from aiohttp import web
 from telethon import functions
 from telethon.tl.types import User
 
+from tgfs.app import init_app
 from tgfs.info import Version, __version__
 from tgfs.log import log
 from tgfs.config import Config
 from tgfs.paralleltransfer import ParallelTransferrer
 from tgfs.telegram import client, load_plugins, multi_clients, start_clients
-from tgfs.routes import routes
 from tgfs.database import DB
 from tgfs.utils.utils import load_configs, load_patches
 
 load_patches("tgfs/patches")
 
-app = web.Application()
-app.add_routes(routes)
+app = init_app()
 runner = web.AppRunner(app, handler_cancellation=True)
 
 async def additional_check():
@@ -135,5 +134,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-    except Exception:
+    except Exception: # pylint: disable=W0718
         log.error(traceback.format_exc())

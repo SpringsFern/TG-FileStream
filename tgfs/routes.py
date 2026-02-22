@@ -104,4 +104,3 @@ async def stream_handler(request: web.Request):
         return web.Response(status=404, text="File not found")
     token = make_token(file["user_id"], file["media_id"])
     return web.HTTPFound(f"{Config.PUBLIC_URL}/dl/{token}")
-    
