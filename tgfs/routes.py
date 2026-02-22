@@ -39,8 +39,9 @@ async def handle_root(_: web.Request):
 # @routes.get(r"/{msg_id:-?\d+}/{name}")
 @routes.get("/dl/{payload}/{sig}")
 @routes.get("/wt/{payload}/{sig}")
-async def handle_file_request(req: web.Request, head: bool= None) -> web.Response:
-    watch: bool = True if "wt" in req.path.split("/") else False
+async def handle_file_request(req: web.Request, head: bool = None, watch: bool = None) -> web.Response:
+    if watch is None:
+        watch: bool = True if "wt" in req.path.split("/") else False
     if head is None:
         head: bool = req.method == "HEAD"
     payload = req.match_info["payload"]
@@ -49,12 +50,12 @@ async def handle_file_request(req: web.Request, head: bool= None) -> web.Respons
     if not pt:
         return web.Response(status=404, text="File not found")
     user_id, file_id = pt
-    transfer: ParallelTransferrer = min(multi_clients, key=lambda c: c.users)
-    log.debug("Using client %s", transfer.client_id)
 
     file = await DB.db.get_file(file_id, user_id)
     if not file:
         return web.Response(status=404, text="File not found")
+    if file.is_deleted:
+        return web.Response(status=451, text="File is restricted")
 
     size = file.file_size
     from_bytes = req.http_range.start or 0
@@ -65,6 +66,8 @@ async def handle_file_request(req: web.Request, head: bool= None) -> web.Respons
     if head:
         body=None
     else:
+        transfer: ParallelTransferrer = min(multi_clients, key=lambda c: c.users)
+        log.debug("Using client %s", transfer.client_id)
         location = await DB.db.get_location(file,  transfer.client_id)
         if location is None:
             source = await DB.db.get_source(file.id, user_id)
