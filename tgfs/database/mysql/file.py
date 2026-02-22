@@ -14,15 +14,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import aiomysql
 from typing import AsyncGenerator, Optional
 
+import aiomysql
 from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
 
 from tgfs.database.database import BaseStorage
 from tgfs.utils.types import FileSource, FileInfo, InputTypeLocation
 
+
 class FileDB(BaseStorage):
+    _pool: aiomysql.Pool
+
     async def add_file(self, user_id: int, file: FileInfo, source: FileSource) -> None:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -116,11 +119,11 @@ class FileDB(BaseStorage):
                         """,
                         (file_id, user_id)
                     )
-    
+
                 row = await cur.fetchone()
                 if not row:
                     return None
-    
+
                 return FileInfo(
                     id=int(row["file_id"]),
                     dc_id=int(row["dc_id"]),
@@ -130,7 +133,6 @@ class FileDB(BaseStorage):
                     thumb_size=row["thumb_size"],
                     is_deleted=bool(row["is_deleted"]),
                 )
-
 
     async def get_location(self, file: FileInfo, bot_id: int) -> Optional[InputTypeLocation]:
         async with self._pool.acquire() as conn:
@@ -147,16 +149,16 @@ class FileDB(BaseStorage):
                 row = await cur.fetchone()
                 if not row:
                     return None
-                
+
                 cls = InputPhotoFileLocation if file.thumb_size else InputDocumentFileLocation
                 return cls(
                     id=file.id,
                     access_hash=int(row["access_hash"]),
                     file_reference=row["file_reference"],
                     thumb_size=file.thumb_size
-                ) 
+                )
 
-    async def get_source(self, file_id: int, user_id: int) -> Optional[FileSource] :
+    async def get_source(self, file_id: int, user_id: int) -> Optional[FileSource]:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
@@ -172,9 +174,9 @@ class FileDB(BaseStorage):
                 if not row:
                     return None
                 return FileSource(
-                    chat_id = int(row["source_chat_id"]),
-                    message_id = int(row["source_msg_id"]),
-                    time = row["added_at"]
+                    chat_id=int(row["source_chat_id"]),
+                    message_id=int(row["source_msg_id"]),
+                    time=row["added_at"]
                 )
 
     async def upsert_location(self, bot_id: int, loc: InputTypeLocation) -> None:
@@ -197,7 +199,7 @@ class FileDB(BaseStorage):
                     raise
 
     async def get_files(self, user_id: int, offset: int = 0, limit: Optional[int] = None
-    ) -> AsyncGenerator[tuple[int, str], None]:
+                        ) -> AsyncGenerator[tuple[int, str], None]:
 
         base_sql = """
             SELECT f.id AS file_id, f.file_name
@@ -221,8 +223,8 @@ class FileDB(BaseStorage):
                     file_id, file_name = row
                     yield int(file_id), str(file_name)
 
-    async def get_files2(self,user_id: int,file_ids: list[int],full: bool = False,
-    ) -> AsyncGenerator[dict | tuple[int, str], None]:
+    async def get_files2(self, user_id: int, file_ids: list[int], full: bool = False,
+                         ) -> AsyncGenerator[dict | tuple[int, str], None]:
 
         if not file_ids:
             return

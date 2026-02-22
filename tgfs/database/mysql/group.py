@@ -15,14 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import aiomysql
 from typing import AsyncGenerator, Optional
+
+import aiomysql
 
 from tgfs.database.database import BaseStorage
 from tgfs.utils.types import GroupInfo
 
 class GroupDB(BaseStorage):
     _list_lock = asyncio.Lock()
+    _pool: aiomysql.Pool
 
     async def create_group(self, user_id: int, name: str) -> int:
         async with self._pool.acquire() as conn:
@@ -75,7 +77,8 @@ class GroupDB(BaseStorage):
                         await conn.rollback()
                         raise
 
-    async def get_groups(self, user_id: int, offset: int = 0, limit: Optional[int] = None) -> AsyncGenerator[tuple[int, str], None]:
+    async def get_groups(self, user_id: int, offset: int = 0, limit: Optional[int] = None
+        ) -> AsyncGenerator[tuple[int, str], None]:
         base_sql = """
                     SELECT group_id, name
                     FROM FILE_GROUP

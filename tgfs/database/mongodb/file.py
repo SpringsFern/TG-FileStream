@@ -18,15 +18,18 @@ from datetime import datetime, timezone
 from typing import AsyncGenerator, Optional, Union
 
 from bson import ObjectId
-from motor.motor_asyncio import AsyncIOMotorCollection
+from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
 from telethon.tl.types import InputDocumentFileLocation, InputPhotoFileLocation
 
 from tgfs.database.database import BaseStorage
 from tgfs.utils.types import FileInfo, FileSource, InputTypeLocation
 
+
 class FileDB(BaseStorage):
+    db: AsyncIOMotorDatabase
     files: AsyncIOMotorCollection
     groups: AsyncIOMotorCollection
+
     async def add_file(self, user_id: int, file: FileInfo, source: FileSource) -> None:
         await self.files.update_one(
             {"_id": file.id},
@@ -58,11 +61,11 @@ class FileDB(BaseStorage):
         query = {"_id": file_id}
         if user_id is not None:
             query[f"users.{user_id}"] = {"$exists": True}
-    
+
         doc = await self.files.find_one(query)
         if not doc:
             return None
-    
+
         return FileInfo(
             id=doc["_id"],
             dc_id=doc["dc_id"],
@@ -89,7 +92,7 @@ class FileDB(BaseStorage):
             file_reference=loc["file_reference"],
             thumb_size=file.thumb_size,
         )
-    
+
     async def get_source(self, file_id: int, user_id: int) -> Optional[FileSource]:
         doc = await self.files.find_one(
             {"_id": file_id, f"users.{user_id}": {"$exists": True}},
@@ -104,7 +107,7 @@ class FileDB(BaseStorage):
             message_id=u["message_id"],
             time=u["added_at"],
         )
-    
+
     async def upsert_location(self, bot_id: int, loc: InputTypeLocation) -> None:
         await self.files.update_one(
             {"_id": loc.id},
@@ -170,7 +173,7 @@ class FileDB(BaseStorage):
         )
         if not doc or "users" not in doc:
             return set()
-    
+
         return {int(uid) for uid in doc["users"].keys()}
 
     async def total_files(self, user_id: int) -> int:
@@ -206,10 +209,10 @@ class FileDB(BaseStorage):
     async def get_file_old(self, file_id: str, user_id: int = None) -> Optional[dict[str, Union[ObjectId, int]]]:
         query = {"_id": ObjectId(file_id)}
         if user_id is not None:
-            query[f"users_id"] = user_id
-    
+            query["users_id"] = user_id
+
         doc = await self.db.maplinks.find_one(query)
         if not doc:
             return None
-    
+
         return doc

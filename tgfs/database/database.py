@@ -54,7 +54,7 @@ class BaseStorage(ABC):
     @abstractmethod
     async def add_file(self, user_id: int, file: FileInfo, source: FileSource) -> None:
         raise NotImplementedError
-    
+
     @abstractmethod
     async def update_file_restriction(self, file_id: int, status: bool) -> None:
         raise NotImplementedError
@@ -82,7 +82,7 @@ class BaseStorage(ABC):
 
     @abstractmethod
     async def get_files2(self, user_id: int, file_ids: list[int], full: bool = False
-                        ) -> AsyncGenerator[tuple[int, str], None]:
+                         ) -> AsyncGenerator[tuple[int, str], None]:
         raise NotImplementedError
 
     @abstractmethod
@@ -96,7 +96,7 @@ class BaseStorage(ABC):
     @abstractmethod
     async def delete_file(self, file_id: int) -> bool:
         raise NotImplementedError
-    
+
     @abstractmethod
     async def remove_file(self, file_id: int, user_id: int) -> bool:
         raise NotImplementedError
@@ -110,7 +110,8 @@ class BaseStorage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_groups(self, user_id: int, offset: int = 0, limit: Optional[int] = None) -> AsyncGenerator[tuple[int, str], None]:
+    async def get_groups(self, user_id: int, offset: int = 0, limit: Optional[int] = None
+    ) -> AsyncGenerator[tuple[int, str], None]:
         raise NotImplementedError
 
     @abstractmethod

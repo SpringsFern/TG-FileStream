@@ -14,22 +14,31 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import aiomysql
 from typing import AsyncGenerator, Optional
+
+import aiomysql
 
 from tgfs.database.database import BaseStorage
 from tgfs.utils.types import User
 
+
 class UserDB(BaseStorage):
+    _pool: aiomysql.Pool
+
     async def get_user(self, user_id: int) -> Optional[User]:
         async with self._pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute("SELECT user_id, join_date, ban_date, warns, preferred_lang, curt_op, op_id FROM TGUSER WHERE user_id = %s", (user_id,))
+                await cur.execute(
+                    """
+                    SELECT user_id, join_date, ban_date, warns, preferred_lang, curt_op, op_id
+                    FROM TGUSER WHERE user_id = %s
+                    """,
+                    (user_id,)
+                )
                 row = await cur.fetchone()
                 if not row:
                     return None
                 return User.from_row(row)
-
 
     async def add_user(self, user_id: int) -> bool:
         async with self._pool.acquire() as conn:
@@ -62,7 +71,8 @@ class UserDB(BaseStorage):
                           curt_op = new.curt_op,
                           op_id = new.op_id
                         """,
-                        (user.user_id, user.join_date, user.ban_date, user.warns, user.preferred_lang, user.curt_op.value, user.op_id)
+                        (user.user_id, user.join_date, user.ban_date, user.warns,
+                         user.preferred_lang, user.curt_op.value, user.op_id)
                     )
                     await conn.commit()
                     return True
@@ -101,4 +111,4 @@ class UserDB(BaseStorage):
             async with conn.cursor() as cur:
                 await cur.execute("SELECT COUNT(*) FROM TGUSER")
                 (count,) = await cur.fetchone()
-                return int(count)            
+                return int(count)

@@ -22,8 +22,10 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from tgfs.database.database import BaseStorage
 from tgfs.utils.types import Status, User
 
+
 class UserDB(BaseStorage):
     users: AsyncIOMotorCollection
+
     async def get_user(self, user_id: int) -> Optional[User]:
         doc = await self.users.find_one({"_id": user_id})
         if not doc:
@@ -51,7 +53,7 @@ class UserDB(BaseStorage):
                 "op_id": 0,
             })
             return True
-        except Exception:
+        except Exception:  # pylint: disable=W0718
             return False
 
     async def upsert_user(self, user: User) -> bool:
@@ -74,7 +76,7 @@ class UserDB(BaseStorage):
     async def delete_user(self, user_id: int) -> bool:
         res = await self.users.delete_one({"_id": user_id})
         return res.deleted_count > 0
-    
+
     async def get_users(self) -> AsyncGenerator[User, None]:
         cursor = self.users.find({})
 
@@ -91,6 +93,3 @@ class UserDB(BaseStorage):
 
     async def count_users(self) -> int:
         return await self.users.count_documents({})
-    
-
-

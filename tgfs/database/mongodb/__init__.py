@@ -32,7 +32,7 @@ class MongoDB(FileDB, GroupDB, UserDB, UtilDB, BaseStorage):
     users: AsyncIOMotorCollection
     config: AsyncIOMotorCollection
 
-    async def connect(self, uri: str, dbname) -> None:
+    async def connect(self, uri: str, dbname) -> None: # pylint: disable=W0221
         if not self.is_connected:
             self.client = AsyncIOMotorClient(uri)
             self.is_connected = True

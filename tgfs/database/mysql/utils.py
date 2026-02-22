@@ -19,6 +19,8 @@ import os
 import json
 from typing import Optional
 
+import aiomysql
+
 from tgfs.database.database import BaseStorage
 from tgfs.utils.types import SupportedType
 
@@ -61,6 +63,8 @@ def decode_value(data: bytes, vtype: str) -> SupportedType:
 
 
 class UtilDB(BaseStorage):
+    _pool: aiomysql.Pool
+
     async def get_secret(self, rotate=False) -> bytes:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -86,7 +90,7 @@ class UtilDB(BaseStorage):
 
                 await conn.commit()
                 return secret
-            
+
     async def get_config_value(self, key: str) -> Optional[SupportedType]:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:

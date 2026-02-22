@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from pathlib import Path
+
 import aiomysql
 
 from .file import FileDB
@@ -21,7 +23,6 @@ from .user import UserDB
 from .group import GroupDB
 from .utils import UtilDB
 
-from pathlib import Path
 
 def read_sql_file(path: str) -> list[str]:
     sql = Path(path).read_text(encoding="utf-8")
@@ -44,7 +45,7 @@ class MySQLDB(FileDB, GroupDB, UserDB, UtilDB):
     _pool: aiomysql.Pool
     is_connected: bool = False
 
-    async def connect(self, *, host: str, port: int = 3306, user: str, password: str,
+    async def connect(self, *, host: str, port: int = 3306, user: str, password: str,  # pylint: disable=W0221
                           db: str, minsize: int = 1, maxsize: int = 10, autocommit: bool = False,
                           connect_timeout: int = 10) -> None:
         if not self.is_connected:
