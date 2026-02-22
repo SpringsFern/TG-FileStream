@@ -224,7 +224,7 @@ class FileDB(BaseStorage):
                     yield int(file_id), str(file_name)
 
     async def get_files2(self, user_id: int, file_ids: list[int], full: bool = False,
-                         ) -> AsyncGenerator[dict | tuple[int, str], None]:
+                         ) -> AsyncGenerator[FileInfo | tuple[int, str], None]:
 
         if not file_ids:
             return
@@ -254,8 +254,17 @@ class FileDB(BaseStorage):
                 if full:
                     columns = [col[0] for col in cur.description]
 
-                    async for row in cur:
-                        yield dict(zip(columns, row))
+                    async for raw_row in cur:
+                        row = dict(zip(columns, raw_row))
+                        yield FileInfo(
+                            id=int(row["id"]),
+                            dc_id=int(row["dc_id"]),
+                            file_size=int(row["size"]),
+                            mime_type=row["mime_type"],
+                            file_name=row["file_name"],
+                            thumb_size=row["thumb_size"],
+                            is_deleted=bool(row["is_deleted"]),
+                        )
                 else:
                     async for row in cur:
                         file_id, file_name = row
